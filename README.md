@@ -39,6 +39,13 @@ pnpm check         # types, lint, no raw values, build, then QA: UI rules, scree
 
 `next dev` writes an `AGENTS.md` and `CLAUDE.md`; they're git-ignored, don't commit them.
 
+## Share images
+
+Links to the app show a 1200×630 preview (`public/og/`): one each for Clients, Tasks, Templates and the client
+portal, with Open Graph and Twitter tags from `lib/og.ts`. After changing a page's look, run `pnpm build && pnpm og`
+and commit the images. The tags use the live address (`NEXT_PUBLIC_SITE_URL`, by default
+`https://imagine-os.github.io/client-management`), since link previews are fetched from there.
+
 ## The brand
 
 `theme/swiss-grid.css` is the brand layer. It redefines the design system's own tokens (colours in light and dark,

@@ -1,10 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import { Providers } from "@/components/site/Providers";
+import { share, siteUrl } from "@/lib/og";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  // Pages without their own share image use the clients one.
+  ...share("home"),
+  metadataBase: new URL(siteUrl),
   title: { default: "JAM Studio · Client management", template: "%s · JAM Studio" },
-  description: "JAM Studio's clients, their projects, tasks and notes, and the template every new client project starts from.",
   robots: { index: false, follow: false },
 };
 

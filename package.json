@@ -19,6 +19,7 @@
     "qa:axe": "node scripts/qa/run.mjs axe",
     "qa:rules": "node scripts/qa/run.mjs rules",
     "qa:flow": "node scripts/qa/run.mjs flow",
+    "og": "node scripts/og-images.mjs",
     "check": "pnpm typecheck && pnpm lint && pnpm lint:values && pnpm build && pnpm qa",
     "sync:ds": "scripts/sync-design-system.sh"
   },
