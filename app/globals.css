@@ -1,0 +1,73 @@
+@layer theme, base, components, utilities;
+@import "tailwindcss";
+@import "../packages/design-system/styles/between-gigs.css";
+
+/* Tailwind scans the vendored components for the classes they use. */
+@source "../packages/design-system/src";
+
+/*
+ * Type scale, per docs/ui-rules.md: body text 16px (17 → 18 for lead text, 13 → 14 for secondary), and
+ * about 1.5 line height for anything people read, captions included. Overrides the system's scale until it
+ * adopts this (docs/design-system-requests.md).
+ */
+@theme {
+  --text-body-lg: 1.125rem;
+  --text-body-lg--line-height: 28px;
+  --text-body-md: 1rem;
+  --text-body-md--line-height: 24px;
+  --text-body-sm: 0.875rem;
+  --text-body-sm--line-height: 21px;
+  --text-caption--line-height: 18px;
+}
+
+@layer base {
+  body { min-height: 100dvh; }
+  /*
+   * Grid items may shrink to their track. Without this, a grid with no explicit columns grows to its widest child
+   * (a long URL, a row of chips) and its content runs off small screens. Utilities (min-w-*) still win.
+   */
+  .grid > * { min-width: 0; }
+}
+
+/*
+ * Dark-mode status surfaces. The system's amber-900 / blue-900 / red-900 read as muddy brown, navy and maroon
+ * on forest green. Here they're the bright status tone tinted over the surface instead, so warnings and notes
+ * stay readable. Same token names, so every Banner and Badge follows. See docs/design-system-requests.md.
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme=light]) {
+    --warning-soft: color-mix(in oklab, var(--warning) 7%, var(--surface-raised));
+    --info-soft: color-mix(in oklab, var(--info) 7%, var(--surface-raised));
+    --danger-soft: color-mix(in oklab, var(--danger) 9%, var(--surface-raised));
+  }
+}
+[data-theme=dark] {
+  --warning-soft: color-mix(in oklab, var(--warning) 7%, var(--surface-raised));
+  --info-soft: color-mix(in oklab, var(--info) 7%, var(--surface-raised));
+  --danger-soft: color-mix(in oklab, var(--danger) 9%, var(--surface-raised));
+}
+
+/*
+ * Touch targets on phones (docs/ui-rules.md): every button and tab is at least 44px tall, and icon-only buttons
+ * 44px wide. Buttons inside sentences (they carry min-h-6), switches and checkboxes keep their own size.
+ */
+@media (max-width: 639px) {
+  :where(button, [role=tab], summary):not(.min-h-6, [role=switch], [role=checkbox]) { min-height: 2.75rem; }
+  :where(button[aria-label], [role=tab][aria-label]):not(.min-h-6, [role=switch], [role=checkbox]) { min-width: 2.75rem; }
+}
+
+/* List rows: a mint edge and a raised shade on hover, instead of moving inside their card. */
+@utility row-lift {
+  transition: background-color 150ms, box-shadow 200ms;
+  &:hover, &:focus-within { box-shadow: inset 3px 0 0 var(--action), 0 6px 16px -10px color-mix(in oklab, var(--on-action) 35%, transparent); }
+}
+
+/* The progress ring in the client portal: --p is the share done, 0 to 100. */
+@property --p { syntax: "<number>"; inherits: true; initial-value: 0; }
+@utility progress-ring {
+  background: conic-gradient(var(--action) calc(var(--p, 0) * 1%), color-mix(in oklab, var(--ink-subtle) 25%, transparent) 0);
+  transition: --p 600ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .progress-ring { transition: none; }
+}

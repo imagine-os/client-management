@@ -1,0 +1,15 @@
+node_modules/
+.next/
+out/
+qa/output/
+*.tsbuildinfo
+next-env.d.ts
+.DS_Store
+
+# Local env files
+.env
+.env*.local
+
+# Written by `next dev`; not part of this repo
+AGENTS.md
+CLAUDE.md

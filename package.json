@@ -1,0 +1,46 @@
+{
+  "name": "client-management",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The studio's client management: clients by stage, their projects, tasks and notes, the new client project template and a client portal. Built on the Between Gigs Design System.",
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --max-warnings 0",
+    "lint:values": "node scripts/check-raw-values.mjs",
+    "qa": "node scripts/qa/run.mjs",
+    "qa:screens": "node scripts/qa/run.mjs screens",
+    "qa:axe": "node scripts/qa/run.mjs axe",
+    "qa:rules": "node scripts/qa/run.mjs rules",
+    "qa:flow": "node scripts/qa/run.mjs flow",
+    "check": "pnpm typecheck && pnpm lint && pnpm lint:values && pnpm build && pnpm qa",
+    "sync:ds": "scripts/sync-design-system.sh"
+  },
+  "dependencies": {
+    "lucide-react": "1.31.0",
+    "next": "16.3.8",
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.2.1",
+    "@types/node": "22.15.30",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "axe-core": "4.10.2",
+    "eslint": "9.39.1",
+    "eslint-config-next": "16.3.8",
+    "playwright-core": "1.56.1",
+    "tailwindcss": "4.2.1",
+    "typescript": "5.9.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": []
+  }
+}
