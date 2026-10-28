@@ -13,3 +13,4 @@ next-env.d.ts
 # Written by `next dev`; not part of this repo
 AGENTS.md
 CLAUDE.md
+deliverables/
