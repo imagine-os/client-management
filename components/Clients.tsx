@@ -1,6 +1,6 @@
 "use client";
-import { Avatar, Badge, Button, Field, IconButton, Input, Menu, Modal, RadioGroup, SegmentedControl, Select, Skeleton, Tab, TabList, TabPanel, Tabs, Textarea, cx, useToast } from "@ds/components";
-import { ArrowLeft, ArrowRight, ArrowUpRight, Briefcase, CalendarClock, Check, CircleCheck, Columns3, ExternalLink, FileText, FolderPlus, GripVertical, List, ListTodo, MessageSquare, MonitorSmartphone, MoreHorizontal, Plus, RotateCcw, UserRound, Users } from "lucide-react";
+import { Badge, Button, Field, IconButton, Input, Menu, Modal, RadioGroup, SegmentedControl, Select, Skeleton, Tab, TabList, TabPanel, Tabs, Table, Textarea, cx, useToast, type Column } from "@ds/components";
+import { ArrowLeft, ArrowRight, ArrowUpRight, Briefcase, CalendarClock, Check, Columns3, ExternalLink, FileText, FolderPlus, GripVertical, LayoutGrid, List, ListTodo, MessageSquare, MonitorSmartphone, MoreHorizontal, Plus, RotateCcw, Table2, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
@@ -8,14 +8,9 @@ import { shortDate, stageTone, stages, uid, useClients, type Client, type Client
 import { scoped, useTeam } from "@/lib/team";
 import { progressOf, projectTypes, templateFor, type LocalProject, type ProjectType } from "@/lib/template";
 import { MainNav, Shell, SideLink, SideSection } from "./Shell";
+import { Tick } from "./tasks/parts";
+import { TaskViews } from "./tasks/TaskViews";
 
-/** Who a task can be assigned to. "Studio" is us; "Client" shows in their portal under Waiting on you. */
-const people = [
-  { id: "Studio", name: "Studio", sub: "Us, the team" },
-  { id: "Anu", name: "Anu", sub: "Design lead" },
-  { id: "Justin", name: "Justin", sub: "Product" },
-  { id: "Client", name: "Client", sub: "Shows in their portal" },
-];
 const DRAG = "application/x-bg-client";
 
 /*
@@ -25,6 +20,7 @@ const DRAG = "application/x-bg-client";
  */
 
 const VIEW_KEY = "cm-clients-view";
+type ClientView = "board" | "list" | "grid" | "table";
 
 export function Clients() {
   const params = useSearchParams();
@@ -36,14 +32,14 @@ export function Clients() {
   const clients = scoped(everyone, team.id);
   const id = params.get("c");
   const client = clients.find((c) => c.id === id);
-  const [view, setView] = React.useState<"board" | "list">("board");
+  const [view, setView] = React.useState<ClientView>("board");
   const [newProject, setNewProject] = React.useState(params.get("new") === "1");
   const [newClient, setNewClient] = React.useState(false);
-  React.useEffect(() => { try { const v = localStorage.getItem(VIEW_KEY); if (v === "board" || v === "list") setView(v); } catch { /* ignore */ } }, []); // eslint-disable-line react-hooks/set-state-in-effect
+  React.useEffect(() => { try { const v = localStorage.getItem(VIEW_KEY); if (v === "board" || v === "list" || v === "grid" || v === "table") setView(v); } catch { /* ignore */ } }, []); // eslint-disable-line react-hooks/set-state-in-effect
 
   const sidebar = (
     <>
-      <MainNav active={client ? undefined : "clients"} clients={clients.length} />
+      <MainNav active={client ? undefined : "clients"} clients={clients.length} tasks={clients.reduce((n, c) => n + c.tasks.filter((t) => !t.done).length, 0)} />
       <SideSection title="Clients">
         {clients.map((c) => <SideLink key={c.id} href={`/?c=${c.id}`} label={c.name} icon={<Monogram name={c.name} />} active={client?.id === c.id}
           trailing={c.sample ? <span className="text-caption text-ink-subtle">Sample</span> : undefined} />)}
@@ -77,11 +73,14 @@ export function Clients() {
             </div>
           </div>
           <div className="mt-6 flex flex-wrap items-center justify-between gap-2">
-            <SegmentedControl label="View" size="sm" value={view} onChange={(v) => { setView(v as "board" | "list"); try { localStorage.setItem(VIEW_KEY, v); } catch { /* ignore */ } }}
-              options={[{ value: "board", label: "Board", icon: <Columns3 /> }, { value: "list", label: "List", icon: <List /> }]} />
+            <SegmentedControl label="View" size="sm" value={view} onChange={(v) => { setView(v as ClientView); try { localStorage.setItem(VIEW_KEY, v); } catch { /* ignore */ } }}
+              options={[{ value: "board", label: "Board", icon: <Columns3 /> }, { value: "list", label: "List", icon: <List /> }, { value: "grid", label: "Grid", icon: <LayoutGrid /> }, { value: "table", label: "Table", icon: <Table2 /> }]} />
             <Button size="sm" variant="ghost" iconStart={<RotateCcw />} onClick={() => { reset(); toast({ message: "Clients reset to the sample", tone: "success" }); }}>Reset sample</Button>
           </div>
-          {view === "board" ? <Board clients={clients} update={update} /> : <ClientList clients={clients} />}
+          {view === "board" && <Board clients={clients} update={update} />}
+          {view === "list" && <ClientList clients={clients} />}
+          {view === "grid" && <ClientGrid clients={clients} />}
+          {view === "table" && <ClientTable clients={clients} />}
         </>
       )}
       <NewProjectDialog open={newProject} onClose={() => setNewProject(false)} clients={clients} defaultClient={client?.id}
@@ -164,6 +163,51 @@ function ClientCard({ c, update }: { c: Client; update: (id: string, fn: (c: Cli
       </p>
     </article>
   );
+}
+
+/** Clients as cards: stage, what's next, how far the milestones are, and who's on it. */
+function ClientGrid({ clients }: { clients: Client[] }) {
+  return (
+    <ul className="mt-5 grid gap-x-6 gap-y-8 sm:grid-cols-2 xl:grid-cols-3">
+      {clients.map((c) => {
+        const done = c.milestones.filter((m) => m.done).length;
+        const pct = c.milestones.length ? Math.round((done / c.milestones.length) * 100) : 0;
+        const m = nextMilestone(c);
+        return (
+          <li key={c.id} className="grid content-start gap-3 border-t-4 border-line-strong pt-3">
+            <div className="flex items-start justify-between gap-2">
+              <h2 className="font-display text-heading-lg text-ink"><Link href={`/?c=${c.id}`} className="inline-flex min-h-11 items-center underline-offset-4 hover:underline sm:min-h-8">{c.name}</Link></h2>
+              <Badge tone={stageTone[c.stage]} size="sm">{stages.find((s) => s.id === c.stage)?.name}</Badge>
+            </div>
+            <p className="text-caption text-ink-subtle">{c.industry}{c.sample && " · Sample"}</p>
+            <p className="text-body-sm text-ink-muted">{c.nextStep}</p>
+            <div className="flex items-center gap-3">
+              <span className="h-1.5 flex-1 overflow-hidden bg-surface-sunken"><span className="block h-full bg-ink" style={{ width: `${pct}%` }} /></span>
+              <span className="text-caption text-ink-subtle tabular-nums">{done}/{c.milestones.length} milestones</span>
+            </div>
+            <p className="flex flex-wrap gap-x-3 text-caption text-ink-subtle"><span>{c.tasks.filter((t) => !t.done).length} open tasks</span>{m && <span>Next: {shortDate(m.date)}</span>}</p>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+type ClientSortKey = "name" | "stage" | "open" | "next" | "started";
+/** Clients as a sortable table. */
+function ClientTable({ clients }: { clients: Client[] }) {
+  const [sort, setSort] = React.useState<{ key: ClientSortKey; direction: "asc" | "desc" }>({ key: "stage", direction: "asc" });
+  const val = (c: Client): string | number => sort.key === "name" ? c.name.toLowerCase() : sort.key === "stage" ? stages.findIndex((s) => s.id === c.stage) : sort.key === "open" ? c.tasks.filter((t) => !t.done).length : sort.key === "next" ? nextMilestone(c)?.date ?? "9999" : c.started;
+  const rows = [...clients].sort((a, b) => { const x = val(a), y = val(b); return (x < y ? -1 : x > y ? 1 : 0) * (sort.direction === "asc" ? 1 : -1); });
+  const columns: Column<Client>[] = [
+    { key: "name", header: "Client", sortable: true, cell: (c) => <Link href={`/?c=${c.id}`} className="inline-flex min-h-11 items-center text-label-md text-ink underline-offset-4 hover:underline sm:min-h-8">{c.name}</Link> },
+    { key: "stage", header: "Stage", sortable: true, cell: (c) => <Badge tone={stageTone[c.stage]} size="sm">{stages.find((s) => s.id === c.stage)?.name}</Badge> },
+    { key: "industry", header: "What they do", cell: (c) => <span className="text-body-sm whitespace-nowrap text-ink-muted">{c.industry}</span> },
+    { key: "open", header: "Open tasks", sortable: true, numeric: true, cell: (c) => c.tasks.filter((t) => !t.done).length },
+    { key: "next", header: "Next milestone", sortable: true, cell: (c) => { const m = nextMilestone(c); return <span className="text-body-sm whitespace-nowrap text-ink-muted">{m ? `${shortDate(m.date)} · ${m.title}` : "None set"}</span>; } },
+    { key: "started", header: "Since", sortable: true, cell: (c) => <span className="text-body-sm whitespace-nowrap text-ink-muted">{shortDate(c.started)}</span> },
+  ];
+  return <Table className="mt-5" caption="Clients" columns={columns} rows={rows} rowKey={(c) => c.id} sort={sort} onSortChange={(s) => setSort({ key: s.key as ClientSortKey, direction: s.direction })} />;
 }
 
 function ClientList({ clients }: { clients: Client[] }) {
@@ -294,7 +338,7 @@ function ClientPage({ client: c, update, onNewProject }: { client: Client; updat
           )}
         </TabPanel>
 
-        <TabPanel value="tasks" className="pt-6"><Tasks c={c} set={set} /></TabPanel>
+        <TabPanel value="tasks" className="pt-6"><TaskViews clients={[c]} scope={c.id} storageKey="cm-client-tasks" /></TabPanel>
         <TabPanel value="notes" className="pt-6"><Notes c={c} set={set} /></TabPanel>
       </Tabs>
     </div>
@@ -333,67 +377,8 @@ function TemplateProject({ p, onChange }: { p: LocalProject; onChange: (p: Local
   );
 }
 
-/** A to-do that toggles with one tap anywhere on its row: a 24px check and the words, the whole line the target. */
-function Tick({ label, done, onToggle }: { label: string; done: boolean; onToggle: () => void }) {
-  return (
-    <button type="button" role="checkbox" aria-checked={done} onClick={onToggle}
-      className="flex min-h-11 w-full items-center gap-3 rounded-md px-2 text-left transition-colors duration-fast hover:bg-surface-hover">
-      <span aria-hidden="true" className={cx("grid size-6 shrink-0 place-items-center rounded-md border-2 transition-colors duration-fast", done ? "border-ink bg-ink text-bg" : "border-line-strong")}>
-        {done && <Check className="size-4" />}
-      </span>
-      <span className={cx("min-w-0 text-body-md", done ? "text-ink-subtle line-through" : "text-ink")}>{label}</span>
-    </button>
-  );
-}
 
-function Tasks({ c, set }: { c: Client; set: (fn: (c: Client) => Client) => void }) {
-  const [title, setTitle] = React.useState("");
-  const [show, setShow] = React.useState<"open" | "all">("open");
-  const list = c.tasks.filter((t) => show === "all" || !t.done);
-  const addTask = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) return;
-    set((x) => ({ ...x, tasks: [{ id: uid(), title: title.trim(), done: false, owner: "Studio" }, ...x.tasks] }));
-    setTitle("");
-  };
-  return (
-    <div className="grid max-w-3xl gap-4">
-      <form onSubmit={addTask} className="flex items-end gap-2">
-        <Field label="Add a task" className="flex-1"><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Send the weekly update" /></Field>
-        <Button type="submit" variant="secondary" iconStart={<Plus />}>Add</Button>
-      </form>
-      <SegmentedControl label="Show" size="sm" value={show} onChange={(v) => setShow(v as "open" | "all")} options={[{ value: "open", label: `Open (${c.tasks.filter((t) => !t.done).length})` }, { value: "all", label: `All (${c.tasks.length})` }]} />
-      {list.length === 0 ? (
-        <p className="flex items-center gap-2 rounded-xl border border-dashed border-line-strong p-5 text-body-md text-ink-muted"><CircleCheck className="size-5 text-success" aria-hidden="true" />Nothing open. Nice.</p>
-      ) : (
-        <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
-          {list.map((t) => (
-            <li key={t.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-2 py-1">
-              <div className="min-w-0 flex-1"><Tick label={t.title} done={t.done} onToggle={() => set((x) => ({ ...x, tasks: x.tasks.map((y) => (y.id === t.id ? { ...y, done: !y.done } : y)) }))} /></div>
-              <Assignee owner={t.owner} task={t.title} onPick={(owner) => set((x) => ({ ...x, tasks: x.tasks.map((y) => (y.id === t.id ? { ...y, owner } : y)) }))} />
-              <Input type="date" aria-label={`Due date for ${t.title}`} value={t.due ?? ""} className="w-40" onChange={(e) => set((x) => ({ ...x, tasks: x.tasks.map((y) => (y.id === t.id ? { ...y, due: e.target.value || undefined } : y)) }))} />
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
 
-/** Who's on a task: their avatar, and a menu to hand it to someone else. */
-function Assignee({ owner, task, onPick }: { owner?: string; task: string; onPick: (owner: string | undefined) => void }) {
-  const who = people.find((p) => p.id === owner);
-  return (
-    <Menu align="end" header={<span className="text-caption text-ink-subtle">Assign to</span>}
-      items={[...people.map((p) => ({ label: p.name, description: p.sub, icon: <Avatar name={p.name} size="sm" />, checked: owner === p.id, onSelect: () => onPick(p.id) })), "separator" as const, { label: "Nobody", icon: <UserRound />, checked: !owner, onSelect: () => onPick(undefined) }]}
-      trigger={
-        <button type="button" aria-label={`${task}: assigned to ${who?.name ?? "nobody"}. Change`} className="inline-flex min-h-11 items-center gap-2 rounded-full py-1 pr-3 pl-1 text-label-sm text-ink-muted hover:bg-surface-hover hover:text-ink">
-          {who ? <Avatar name={who.name} size="sm" /> : <span aria-hidden="true" className="grid size-6 place-items-center rounded-full border border-dashed border-line-strong"><UserRound className="size-3.5" /></span>}
-          <span className="max-sm:sr-only">{who?.name ?? "Assign"}</span>
-        </button>
-      } />
-  );
-}
 
 function Notes({ c, set }: { c: Client; set: (fn: (c: Client) => Client) => void }) {
   const [text, setText] = React.useState("");
@@ -401,7 +386,7 @@ function Notes({ c, set }: { c: Client; set: (fn: (c: Client) => Client) => void
   const notes = [...c.notes].sort((a, b) => b.at.localeCompare(a.at));
   return (
     <div className="grid max-w-3xl gap-5">
-      <form className="grid gap-2" onSubmit={(e) => { e.preventDefault(); if (!text.trim()) { setErr("Write the note first."); return; } set((x) => ({ ...x, notes: [...x.notes, { id: uid(), at: new Date().toISOString(), by: "Studio", text: text.trim() }] })); setText(""); setErr(undefined); }}>
+      <form className="grid gap-2" onSubmit={(e) => { e.preventDefault(); if (!text.trim()) { setErr("Write the note first."); return; } set((x) => ({ ...x, notes: [...x.notes, { id: uid(), at: new Date().toISOString(), by: "JAM Studio", text: text.trim() }] })); setText(""); setErr(undefined); }}>
         <Field label="Add a note" error={err} hint={err ? undefined : "Decisions, requests and what was agreed. Kept with the client."}><Textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} /></Field>
         <div><Button type="submit" variant="secondary" iconStart={<MessageSquare />}>Save note</Button></div>
       </form>

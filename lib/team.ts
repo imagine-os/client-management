@@ -1,11 +1,11 @@
 /*
- * The team in view, kept in this browser: "Our studio" sees every client; the Between Gigs team sees only its own.
+ * The team in view, kept in this browser: "JAM Studio" sees every client; the Between Gigs team sees only its own.
  * One small store with a subscribe, so the switcher and the board change together.
  */
 import * as React from "react";
 
 export const teams = [
-  { id: "studio", name: "Our studio", sub: "Every client and project" },
+  { id: "studio", name: "JAM Studio", sub: "Every client and project" },
   { id: "between-gigs", name: "Between Gigs team", sub: "Only the Between Gigs client" },
 ] as const;
 export type TeamId = (typeof teams)[number]["id"];

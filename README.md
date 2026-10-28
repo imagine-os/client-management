@@ -1,19 +1,25 @@
-# Client management
+# JAM Studio · Client management
 
-The studio's client management, split out of the [Between Gigs 2.0](https://github.com/Between-Gigs/between-gig-2.0)
+JAM Studio's client management, split out of the [Between Gigs 2.0](https://github.com/Between-Gigs/between-gig-2.0)
 workspace into its own app. Built with Next.js (static export) and Tailwind v4 on the Between Gigs Design System,
 branded **Swiss Grid**: white, black and one hard blue, Archivo throughout, square corners, rules instead of boxes.
 
-- **Clients** (`/`): a board of clients by stage (lead, proposal, active, paused, complete) with drag and drop, and
-  a list view. Each client (`/?c=<id>`) has Overview (milestones, people, links), Projects, Tasks (assignees, due
+- **Clients** (`/`): clients by stage (lead, proposal, active, paused, complete) as a Board with drag and drop, a
+  List, a Grid of cards or a sortable Table. Each client (`/?c=<id>`) has Overview (milestones, people, links), Projects, Tasks (assignees, due
   dates) and Notes.
 - **New project from the template**: five phases (kickoff, foundation, build, quality, handoff) with a checklist
   for each project type (website, web app, onboarding, brand). Source: `lib/template.ts`; written standard:
   `docs/templates/client-project.md`.
+- **Tasks** (`/tasks/`): every client's tasks in one place, ClickUp-style. Four views of the same tasks: **List**
+  (grouped, collapsible, quick add per group), **Board** (drag cards between columns), **Table** (sort and edit in
+  place) and **Calendar** (drag a task onto a day). Search, filters (status, priority, assignee, client, due), group
+  by and sort are shared across views; saved views in the left bar (Due this week, Overdue, Urgent and high, Waiting
+  on clients). Open a task for its details: status, priority, assignee, due date, client, description, subtasks.
+  Each client's Tasks tab has the same views for just their tasks.
 - **Templates** (`/templates/`): a gallery; "Use template" opens New project with the type chosen.
 - **Client portal** (`/portal/?c=<id>`): what a client sees: progress, what's waiting on them, the next milestone to
   approve, and the latest updates.
-- **Shell**: team switcher ("Our studio" / "Between Gigs team"), ⌘K, "Due soon" in the bell, `[` and `]` for the
+- **Shell**: team switcher ("JAM Studio" / "Between Gigs team"), ⌘K, "Due soon" in the bell, `[` and `]` for the
   side bars.
 
 ## Local only, for now

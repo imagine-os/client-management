@@ -94,7 +94,7 @@ export function ClientPortal() {
           <ol className="mt-3 grid gap-3">
             {updates.map((n) => (
               <li key={n.id} className="grid gap-0.5 border-t border-line pt-3 first:border-0 first:pt-0">
-                <span className="text-caption text-ink-subtle"><Badge tone={n.by === "Client" ? "info" : "success"} size="sm">{n.by === "Client" ? "You" : "Studio"}</Badge> · {new Date(n.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                <span className="text-caption text-ink-subtle"><Badge tone={n.by === "Client" ? "info" : "success"} size="sm">{n.by === "Client" ? "You" : "JAM Studio"}</Badge> · {new Date(n.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
                 <p className="text-body-md text-ink">{n.text}</p>
               </li>
             ))}

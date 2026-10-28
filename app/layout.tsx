@@ -3,8 +3,8 @@ import { Providers } from "@/components/site/Providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Client management", template: "%s · Client management" },
-  description: "The studio's clients, their projects, tasks and notes, and the template every new client project starts from.",
+  title: { default: "JAM Studio · Client management", template: "%s · JAM Studio" },
+  description: "JAM Studio's clients, their projects, tasks and notes, and the template every new client project starts from.",
   robots: { index: false, follow: false },
 };
 

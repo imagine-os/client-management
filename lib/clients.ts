@@ -16,7 +16,22 @@ export const stages: { id: ClientStage; name: string; sub: string }[] = [
 ];
 export const stageTone: Record<ClientStage, "neutral" | "info" | "success" | "warning"> = { lead: "neutral", proposal: "info", active: "success", paused: "warning", complete: "neutral" };
 
-export interface ClientTask { id: string; title: string; done: boolean; due?: string; owner?: string }
+export type TaskStatus = "todo" | "doing" | "review" | "done";
+export type TaskPriority = "urgent" | "high" | "normal" | "low";
+export interface Subtask { id: string; title: string; done: boolean }
+export interface ClientTask {
+  id: string;
+  title: string;
+  /** Kept in step with status (status "done" ⇔ done), so the portal and the bell can keep reading it. */
+  done: boolean;
+  /** Where the task stands. Missing on tasks saved before statuses existed: read it with statusOf (lib/tasks.ts). */
+  status?: TaskStatus;
+  priority?: TaskPriority;
+  due?: string;
+  owner?: string;
+  description?: string;
+  subtasks?: Subtask[];
+}
 export interface Milestone { id: string; title: string; date: string; done: boolean }
 /** A project that lives somewhere else (the client's own repo or workspace). */
 export interface LinkedProject { id: string; name: string; summary: string; href: string }
@@ -51,7 +66,7 @@ const seed: Client[] = [
     id: "between-gigs", name: "Between Gigs", stage: "active", industry: "Marketplace · entertainment talent", started: "2026-09-15",
     summary: "A marketplace where entertainment professionals offer their skills between productions. We're building 2.0: the Gigster journey, the owner tools, Studio and the workspace.",
     nextStep: "Review the new onboarding (Edit on your profile) and pick a Figma team for image generation.",
-    contacts: [{ name: "Client team", role: "Product owners" }, { name: "Anu", role: "Backend" }, { name: "Our studio", role: "Design and front end" }],
+    contacts: [{ name: "Client team", role: "Product owners" }, { name: "Anu", role: "Backend" }, { name: "JAM Studio", role: "Design and front end" }],
     linked: [
       { id: "canvas", name: "Edit on your profile", summary: "Onboarding as editing: the Gigster lands on their own profile, blank, and fills each part in place.", href: `${BG}/canvas/` },
       { id: "questionnaire", name: "Profile questionnaire", summary: "The current onboarding: invite, account, five autosaved steps with a live card, review and submit.", href: `${BG}/questionnaire/` },
@@ -73,13 +88,13 @@ const seed: Client[] = [
       { label: "Backend handoff", href: "https://between-gigs.github.io/between-gig-2.0/artifacts/backend-handoff/" },
     ],
     tasks: [
-      { id: "t1", title: "Edit on your profile: client review of the new default onboarding", done: false, due: "2026-10-30", owner: "Client" },
-      { id: "t2", title: "Choose the Figma team for generated imagery", done: false, due: "2026-10-30", owner: "Client" },
-      { id: "t3", title: "Worker API and D1 tables (DataSource → api.ts)", done: false, due: "2026-11-14", owner: "Anu" },
-      { id: "t4", title: "Clerk production instance and DNS", done: false, due: "2026-11-07", owner: "Client" },
-      { id: "t5", title: "Owner tools and Studio on the workspace shell", done: false, due: "2026-11-06", owner: "Studio" },
-      { id: "t6", title: "Share images on every page", done: true, owner: "Studio" },
-      { id: "t7", title: "Workspace with project switcher and ⌘K", done: true, owner: "Studio" },
+      { id: "t1", title: "Edit on your profile: client review of the new default onboarding", done: false, status: "review", priority: "urgent", due: "2026-10-30", owner: "Client", description: "Open the profile canvas as Ava (blank), Elena (part-filled) and Hana (changes requested), and leave notes on anything that feels off." },
+      { id: "t2", title: "Choose the Figma team for generated imagery", done: false, status: "todo", priority: "high", due: "2026-10-30", owner: "Client" },
+      { id: "t3", title: "Worker API and D1 tables (DataSource → api.ts)", done: false, status: "doing", priority: "high", due: "2026-11-14", owner: "Anu", subtasks: [{ id: "s1", title: "Tables and migrations", done: true }, { id: "s2", title: "Invite and sign-up endpoints", done: false }, { id: "s3", title: "Swap the sample DataSource", done: false }] },
+      { id: "t4", title: "Clerk production instance and DNS", done: false, status: "todo", priority: "normal", due: "2026-11-07", owner: "Client" },
+      { id: "t5", title: "Owner tools and Studio on the workspace shell", done: false, status: "doing", priority: "normal", due: "2026-11-06", owner: "Studio" },
+      { id: "t6", title: "Share images on every page", done: true, status: "done", priority: "low", owner: "Studio" },
+      { id: "t7", title: "Workspace with project switcher and ⌘K", done: true, status: "done", priority: "normal", owner: "Studio" },
     ],
     milestones: [
       { id: "m1", title: "Profile builder and owner tools", date: "2026-10-20", done: true },
@@ -97,27 +112,27 @@ const seed: Client[] = [
     id: "northlight", name: "Northlight Studio", sample: true, stage: "proposal", industry: "Architecture practice", started: "2026-10-21",
     summary: "A small practice wanting a portfolio site with a project archive their team can update.", nextStep: "Send the website proposal and timeline.",
     contacts: [{ name: "Sample contact", role: "Principal" }], linked: [], local: [], links: [],
-    tasks: [{ id: "t1", title: "Proposal: website, 6 weeks", done: false, due: "2026-11-03", owner: "Studio" }, { id: "t2", title: "Collect project photography", done: false, owner: "Client" }],
-    milestones: [{ id: "m1", title: "Proposal sent", date: "2026-11-03", done: false }], notes: [{ id: "n1", at: "2026-10-22T15:00:00Z", by: "Studio", text: "Intro call: wants a calm, image-led site." }],
+    tasks: [{ id: "t1", title: "Proposal: website, 6 weeks", done: false, status: "doing", priority: "high", due: "2026-11-03", owner: "Justin" }, { id: "t2", title: "Collect project photography", done: false, status: "todo", priority: "normal", owner: "Client" }],
+    milestones: [{ id: "m1", title: "Proposal sent", date: "2026-11-03", done: false }], notes: [{ id: "n1", at: "2026-10-22T15:00:00Z", by: "JAM Studio", text: "Intro call: wants a calm, image-led site." }],
   },
   {
     id: "harbor", name: "Harbor & Co.", sample: true, stage: "lead", industry: "Hospitality group", started: "2026-10-26",
     summary: "Three restaurants looking for one booking and events site.", nextStep: "Book a discovery call.",
     contacts: [{ name: "Sample contact", role: "Operations" }], linked: [], local: [], links: [],
-    tasks: [{ id: "t1", title: "Discovery call", done: false, due: "2026-11-05", owner: "Studio" }], milestones: [], notes: [],
+    tasks: [{ id: "t1", title: "Discovery call", done: false, status: "todo", priority: "normal", due: "2026-11-05", owner: "Justin" }, { id: "t2", title: "Look at their current booking flow", done: false, status: "todo", priority: "low", due: "2026-11-04", owner: "Anu" }], milestones: [], notes: [],
   },
   {
     id: "kestrel", name: "Kestrel Health", sample: true, stage: "paused", industry: "Clinic network", started: "2026-08-04",
     summary: "Patient onboarding flow; paused while their compliance review finishes.", nextStep: "Check in after their review on Nov 10.",
     contacts: [{ name: "Sample contact", role: "Product" }], linked: [], local: [], links: [],
-    tasks: [{ id: "t1", title: "Onboarding flow v2", done: false, owner: "Studio" }, { id: "t2", title: "Accessibility audit", done: true, owner: "Studio" }],
+    tasks: [{ id: "t1", title: "Onboarding flow v2", done: false, status: "todo", priority: "low", due: "2026-11-12", owner: "Anu" }, { id: "t2", title: "Accessibility audit", done: true, status: "done", priority: "normal", owner: "Studio" }],
     milestones: [{ id: "m1", title: "Flow v1 delivered", date: "2026-09-12", done: true }, { id: "m2", title: "Restart after review", date: "2026-11-10", done: false }], notes: [],
   },
   {
     id: "fieldnotes", name: "Fieldnotes Journal", sample: true, stage: "complete", industry: "Publishing", started: "2026-06-02",
     summary: "Editorial site and newsletter templates, delivered.", nextStep: "Ask for a testimonial.",
     contacts: [{ name: "Sample contact", role: "Editor" }], linked: [], local: [], links: [],
-    tasks: [{ id: "t1", title: "Launch", done: true, owner: "Studio" }], milestones: [{ id: "m1", title: "Launched", date: "2026-08-20", done: true }], notes: [],
+    tasks: [{ id: "t1", title: "Launch", done: true, status: "done", priority: "high", owner: "Studio" }, { id: "t2", title: "Ask for a testimonial", done: false, status: "todo", priority: "low", due: "2026-11-02", owner: "Justin" }], milestones: [{ id: "m1", title: "Launched", date: "2026-08-20", done: true }], notes: [],
   },
 ];
 
@@ -154,7 +169,17 @@ export function useClients() {
     write(read().map((c) => (c.id === clientId ? { ...c, local: [...c.local, project] } : c)));
     return project;
   }, []);
-  return { clients, ready, update, add, reset, addProject };
+  const updateTask = React.useCallback((clientId: string, taskId: string, fn: (t: ClientTask) => ClientTask) =>
+    write(read().map((c) => (c.id === clientId ? { ...c, tasks: c.tasks.map((t) => (t.id === taskId ? fn(t) : t)) } : c))), []);
+  const addTask = React.useCallback((clientId: string, t: ClientTask) => write(read().map((c) => (c.id === clientId ? { ...c, tasks: [t, ...c.tasks] } : c))), []);
+  const removeTask = React.useCallback((clientId: string, taskId: string) => write(read().map((c) => (c.id === clientId ? { ...c, tasks: c.tasks.filter((t) => t.id !== taskId) } : c))), []);
+  /** Moves a task to another client, keeping everything else about it. */
+  const moveTask = React.useCallback((from: string, taskId: string, to: string) => {
+    const task = read().find((c) => c.id === from)?.tasks.find((t) => t.id === taskId);
+    if (!task || from === to) return;
+    write(read().map((c) => (c.id === from ? { ...c, tasks: c.tasks.filter((t) => t.id !== taskId) } : c.id === to ? { ...c, tasks: [{ ...task, id: uid() }, ...c.tasks] } : c)));
+  }, []);
+  return { clients, ready, update, add, reset, addProject, updateTask, addTask, removeTask, moveTask };
 }
 
 export const uid = () => Math.random().toString(36).slice(2, 9);

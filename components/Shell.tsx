@@ -1,6 +1,6 @@
 "use client";
 import { CommandPalette, Drawer, IconButton, Kbd, Menu, Modal, Popover, ThemeToggle, cx, useCommandShortcut, type Command } from "@ds/components";
-import { Bell, Building2, CalendarClock, ChevronsUpDown, CircleHelp, FolderPlus, LayoutTemplate, Moon, PanelLeft, PanelRight, Search, Users } from "lucide-react";
+import { Bell, Building2, ListChecks, CalendarClock, ChevronsUpDown, CircleHelp, FolderPlus, LayoutTemplate, Moon, PanelLeft, PanelRight, Search, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -76,6 +76,7 @@ export function Shell({ sidebar, sidebarTitle, inspector, inspectorTitle = "Deta
   const all: Command[] = [
     ...commands,
     { id: "clients", label: "Clients", group: "Go to", icon: <Users />, keywords: "client management crm board tasks milestones", onRun: () => router.push("/") },
+    { id: "tasks", label: "Tasks", group: "Go to", icon: <ListChecks />, keywords: "to do list board kanban calendar table", onRun: () => router.push("/tasks/") },
     { id: "templates", label: "Templates", group: "Go to", icon: <LayoutTemplate />, keywords: "start gallery new", onRun: () => router.push("/templates/") },
     { id: "new-project", label: "New project from the template", group: "Actions", icon: <FolderPlus />, keywords: "create start client template", onRun: () => router.push("/?new=1") },
     { id: "shortcuts", label: "Keyboard shortcuts", group: "Help", icon: <CircleHelp />, shortcut: ["?"], onRun: () => setHelp(true) },
@@ -154,6 +155,7 @@ export function Shell({ sidebar, sidebarTitle, inspector, inspectorTitle = "Deta
 const shortcuts: { group: string; items: [string[], string][] }[] = [
   { group: "Anywhere", items: [[["⌘", "K"], "Search or jump to…"], [["["], "Show or hide the left bar"], [["]"], "Show or hide details"], [["?"], "These shortcuts"]] },
   { group: "Clients", items: [[["Drag"], "Move a client to another stage"]] },
+  { group: "Tasks", items: [[["Drag"], "Move a card to another column or day"], [["↵"], "Save a quick-added task"], [["Esc"], "Close the quick add"]] },
 ];
 
 /** The bell: client tasks due within three days, for the team in view. */
@@ -204,10 +206,11 @@ function BuildStamp() {
 }
 
 /** The places every page's left bar starts with. */
-export function MainNav({ active, clients }: { active?: "clients" | "templates"; clients?: number }) {
+export function MainNav({ active, clients, tasks }: { active?: "clients" | "tasks" | "templates"; clients?: number; tasks?: number }) {
   return (
     <SideSection title="Client management">
       <SideLink href="/" label="Clients" icon={<Users />} count={clients || undefined} active={active === "clients"} />
+      <SideLink href="/tasks/" label="Tasks" icon={<ListChecks />} count={tasks || undefined} active={active === "tasks"} />
       <SideLink href="/templates/" label="Templates" icon={<LayoutTemplate />} active={active === "templates"} />
     </SideSection>
   );
