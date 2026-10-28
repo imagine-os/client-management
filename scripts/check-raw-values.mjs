@@ -1,7 +1,8 @@
 // Ported from the design system's scripts/check-raw-values.mjs.
 // Fails if app code bypasses the tokens: raw hex colors, rgb()/hsl() literals, or Tailwind
 // arbitrary values like p-[13px] or bg-[#123456]. Use a token, or ask for one in
-// docs/design-system-requests.md.
+// docs/design-system-requests.md. theme/ is the brand layer, where the palette is defined, so it isn't scanned
+// (like packages/design-system/).
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

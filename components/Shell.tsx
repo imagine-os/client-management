@@ -1,11 +1,12 @@
 "use client";
-import { CommandPalette, Drawer, IconButton, Kbd, Logo, Menu, Modal, Popover, ThemeToggle, cx, useCommandShortcut, type Command } from "@ds/components";
+import { CommandPalette, Drawer, IconButton, Kbd, Menu, Modal, Popover, ThemeToggle, cx, useCommandShortcut, type Command } from "@ds/components";
 import { Bell, Building2, CalendarClock, ChevronsUpDown, CircleHelp, FolderPlus, LayoutTemplate, Moon, PanelLeft, PanelRight, Search, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { shortDate, useClients } from "@/lib/clients";
 import { scoped, teamStore, teams, useTeam } from "@/lib/team";
+import { Wordmark } from "./Wordmark";
 
 /*
  * The shell: one frame around the client tools. Top bar with the team switcher and ⌘K search, a left bar for where
@@ -86,9 +87,9 @@ export function Shell({ sidebar, sidebarTitle, inspector, inspectorTitle = "Deta
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-bg text-ink">
-      <header className="flex h-14 shrink-0 items-center gap-1.5 border-b border-line bg-surface px-2 sm:gap-2 sm:px-3">
+      <header className="flex h-14 shrink-0 items-center gap-1.5 border-b-2 border-line-strong bg-surface px-2 sm:gap-2 sm:px-3">
         <IconButton label="Open the left bar" variant="ghost" icon={<PanelLeft />} className="lg:hidden" onClick={() => setLeftDrawer(true)} />
-        <Link href="/" aria-label="Clients home" className="inline-flex min-h-11 shrink-0 items-center rounded-md px-1"><Logo layout="mark" height={24} /></Link>
+        <Link href="/" aria-label="Clients home" className="inline-flex min-h-11 shrink-0 items-center px-1"><Wordmark compact /></Link>
         <Menu align="start" header={<span className="text-caption text-ink-subtle">Team</span>} items={teams.map((t) => ({ label: t.name, description: t.sub, icon: <Building2 />, checked: team.id === t.id, onSelect: () => teamStore.set(t.id) }))} trigger={
           <button type="button" aria-label={`Switch team. Now: ${team.name}`} className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-md px-2 text-label-md text-ink hover:bg-surface-hover max-md:px-1">
             <span className="max-md:sr-only">{team.name}</span><ChevronsUpDown className="size-4 text-ink-subtle" aria-hidden="true" />
@@ -216,8 +217,8 @@ export function MainNav({ active, clients }: { active?: "clients" | "templates";
 export function SideLink({ href, label, icon, count, active, trailing }: { href: string; label: string; icon?: React.ReactNode; count?: number; active?: boolean; trailing?: React.ReactNode }) {
   return (
     <Link href={href} aria-current={active ? "page" : undefined}
-      className={cx("group flex min-h-10 items-center gap-3 rounded-md px-3 text-label-md transition-colors duration-fast [&_svg]:size-4.5 [&_svg]:shrink-0",
-        active ? "bg-surface-selected text-ink" : "text-ink-muted hover:bg-surface-hover hover:text-ink")}>
+      className={cx("group flex min-h-10 items-center gap-3 border-l-4 px-3 text-label-md transition-colors duration-fast [&_svg]:size-4.5 [&_svg]:shrink-0",
+        active ? "border-action bg-surface-selected text-ink" : "border-transparent text-ink-muted hover:bg-surface-hover hover:text-ink")}>
       {icon && <span className={active ? "text-ink-brand" : "text-ink-subtle group-hover:text-ink-muted"}>{icon}</span>}
       <span className="min-w-0 flex-1 truncate">{label}</span>
       {trailing}

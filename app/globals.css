@@ -1,6 +1,8 @@
 @layer theme, base, components, utilities;
 @import "tailwindcss";
 @import "../packages/design-system/styles/between-gigs.css";
+/* The brand: Swiss Grid, over the system's tokens (theme/swiss-grid.css). */
+@import "../theme/swiss-grid.css";
 
 /* Tailwind scans the vendored components for the classes they use. */
 @source "../packages/design-system/src";

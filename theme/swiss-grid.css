@@ -1,0 +1,206 @@
+/*
+ * Swiss Grid: the brand of the studio's client management (direction E, chosen Oct 28).
+ * White, black and one hard blue; Archivo throughout, condensed and heavy for display; square corners; no shadows on
+ * the page (overlays keep a plain one so they lift off what's under them); heavy rules divide things instead of boxes.
+ *
+ * This is the app's brand layer over the vendored Between Gigs Design System. It redefines the system's own token
+ * names, so every component follows without being edited. It's the one place raw colour values live: the rest of
+ * the app uses the tokens (pnpm lint:values exempts theme/ the same way it never scans packages/design-system/).
+ */
+
+@font-face {
+  font-family: "Archivo";
+  font-style: normal;
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  font-display: swap;
+  src: url("./fonts/Archivo-Variable.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Archivo";
+  font-style: normal;
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  font-display: swap;
+  src: url("./fonts/Archivo-Variable-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@theme {
+  --font-display: Archivo, "Helvetica Neue", Arial, system-ui, sans-serif;
+  --font-sans: Archivo, "Helvetica Neue", Arial, system-ui, sans-serif;
+
+  /* Display type: heavy and tight (and condensed, below). */
+  --text-display-xl--font-weight: 800;
+  --text-display-xl--letter-spacing: -0.04em;
+  --text-display-lg--font-weight: 800;
+  --text-display-lg--letter-spacing: -0.04em;
+  --text-display-md--font-weight: 800;
+  --text-display-md--letter-spacing: -0.04em;
+  --text-display-sm--font-weight: 800;
+  --text-display-sm--letter-spacing: -0.035em;
+  --text-stat--font-weight: 800;
+  --text-heading-lg--font-weight: 700;
+  --text-heading-md--font-weight: 700;
+  --text-heading-sm--font-weight: 700;
+
+  /* Square corners. Full stays round: avatars, the progress ring and status dots are circles by meaning. */
+  --radius-xs: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+}
+
+/* Light (the default). */
+:root {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-sunken: #f2f2f2;
+  --surface-hover: #0a0a0a0d;
+  --surface-selected: #e8ecff;
+  --surface-brand: #0a0a0a;
+  --surface-embed: #ffffff;
+  --scrim: #0a0a0a99;
+  --line: #d4d4d4;
+  --line-strong: #0a0a0a;
+  --line-dashed: #a3a3a3;
+  --focus: #1a3cff;
+  --ink: #0a0a0a;
+  --ink-muted: #3d3d3d;
+  --ink-subtle: #5c5c5c;
+  --ink-disabled: #a3a3a3;
+  --ink-brand: #1a3cff;
+  --ink-on-brand: #ffffff;
+  --ink-on-embed: #0a0a0a;
+  --link: #1a3cff;
+  --action: #1a3cff;
+  --action-hover: #0f2bd6;
+  --on-action: #ffffff;
+  --action-strong: #0a0a0a;
+  --action-strong-hover: #2b2b2b;
+  --on-action-strong: #ffffff;
+  --action-danger: #c4140c;
+  --on-action-danger: #ffffff;
+  --success: #0b7a3e;
+  --success-soft: #e3f4ea;
+  --warning: #8a5a00;
+  --warning-soft: #fcefc4;
+  --danger: #c4140c;
+  --danger-soft: #fde6e4;
+  --info: #1a3cff;
+  --info-soft: #e8ecff;
+  --neutral-soft: #f0f0f0;
+  --highlight: #d9dfff;
+  --logo-mark: #1a3cff;
+  --logo-ink: #0a0a0a;
+  --logo-rule: #8a8a8a;
+  --elev-xs: none;
+  --elev-sm: none;
+  --elev-md: 0 8px 24px #0a0a0a1f;
+  --elev-lg: 0 16px 48px #0a0a0a2e;
+  --elev-glow: 0 0 0 2px #1a3cff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme=light]) {
+    --bg: #0a0a0a;
+    --surface: #0a0a0a;
+    --surface-raised: #161616;
+    --surface-sunken: #141414;
+    --surface-hover: #ffffff12;
+    --surface-selected: #171d42;
+    --surface-brand: #f5f5f5;
+    --surface-embed: #161616;
+    --scrim: #000000b3;
+    --line: #333333;
+    --line-strong: #f5f5f5;
+    --line-dashed: #5c5c5c;
+    --focus: #8c9bff;
+    --ink: #f5f5f5;
+    --ink-muted: #cfcfcf;
+    --ink-subtle: #a6a6a6;
+    --ink-disabled: #5c5c5c;
+    --ink-brand: #8c9bff;
+    --ink-on-brand: #0a0a0a;
+    --ink-on-embed: #f5f5f5;
+    --link: #8c9bff;
+    --action: #7d90ff;
+    --action-hover: #97a6ff;
+    --on-action: #0a0a0a;
+    --action-strong: #f5f5f5;
+    --action-strong-hover: #d9d9d9;
+    --on-action-strong: #0a0a0a;
+    --action-danger: #ff7a6b;
+    --on-action-danger: #0a0a0a;
+    --success: #5fd38d;
+    --success-soft: #0f2a1b;
+    --warning: #f5cf63;
+    --danger: #ff8a7a;
+    --info: #8c9bff;
+    --neutral-soft: #1d1d1d;
+    --highlight: #26307a;
+    --logo-mark: #7d90ff;
+    --logo-ink: #f5f5f5;
+    --logo-rule: #6b6b6b;
+    --elev-xs: none;
+    --elev-sm: none;
+    --elev-md: 0 8px 24px #00000080;
+    --elev-lg: 0 16px 48px #000000a6;
+    --elev-glow: 0 0 0 2px #7d90ff;
+    color-scheme: dark;
+  }
+}
+[data-theme=dark] {
+  --bg: #0a0a0a;
+  --surface: #0a0a0a;
+  --surface-raised: #161616;
+  --surface-sunken: #141414;
+  --surface-hover: #ffffff12;
+  --surface-selected: #171d42;
+  --surface-brand: #f5f5f5;
+  --surface-embed: #161616;
+  --scrim: #000000b3;
+  --line: #333333;
+  --line-strong: #f5f5f5;
+  --line-dashed: #5c5c5c;
+  --focus: #8c9bff;
+  --ink: #f5f5f5;
+  --ink-muted: #cfcfcf;
+  --ink-subtle: #a6a6a6;
+  --ink-disabled: #5c5c5c;
+  --ink-brand: #8c9bff;
+  --ink-on-brand: #0a0a0a;
+  --ink-on-embed: #f5f5f5;
+  --link: #8c9bff;
+  --action: #7d90ff;
+  --action-hover: #97a6ff;
+  --on-action: #0a0a0a;
+  --action-strong: #f5f5f5;
+  --action-strong-hover: #d9d9d9;
+  --on-action-strong: #0a0a0a;
+  --action-danger: #ff7a6b;
+  --on-action-danger: #0a0a0a;
+  --success: #5fd38d;
+  --success-soft: #0f2a1b;
+  --warning: #f5cf63;
+  --danger: #ff8a7a;
+  --info: #8c9bff;
+  --neutral-soft: #1d1d1d;
+  --highlight: #26307a;
+  --logo-mark: #7d90ff;
+  --logo-ink: #f5f5f5;
+  --logo-rule: #6b6b6b;
+  --elev-xs: none;
+  --elev-sm: none;
+  --elev-md: 0 8px 24px #00000080;
+  --elev-lg: 0 16px 48px #000000a6;
+  --elev-glow: 0 0 0 2px #7d90ff;
+  color-scheme: dark;
+}
+
+/* Display type is Archivo condensed. */
+.font-display { font-stretch: 75%; }

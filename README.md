@@ -1,7 +1,8 @@
 # Client management
 
 The studio's client management, split out of the [Between Gigs 2.0](https://github.com/Between-Gigs/between-gig-2.0)
-workspace into its own app. Built with Next.js (static export) and Tailwind v4 on the Between Gigs Design System.
+workspace into its own app. Built with Next.js (static export) and Tailwind v4 on the Between Gigs Design System,
+branded **Swiss Grid**: white, black and one hard blue, Archivo throughout, square corners, rules instead of boxes.
 
 - **Clients** (`/`): a board of clients by stage (lead, proposal, active, paused, complete) with drag and drop, and
   a list view. Each client (`/?c=<id>`) has Overview (milestones, people, links), Projects, Tasks (assignees, due
@@ -32,11 +33,17 @@ pnpm check         # types, lint, no raw values, build, then QA: UI rules, scree
 
 `next dev` writes an `AGENTS.md` and `CLAUDE.md`; they're git-ignored, don't commit them.
 
+## The brand
+
+`theme/swiss-grid.css` is the brand layer. It redefines the design system's own tokens (colours in light and dark,
+fonts, display weights, radii, shadows) so every component follows without editing the system, and holds the
+Archivo font files. It is the one place raw colour values live. The mark is `components/Wordmark.tsx`.
+
 ## Conventions
 
 - Don't edit `packages/design-system/`. Request changes in `docs/design-system-requests.md`; re-sync with
   `pnpm sync:ds /path/to/between-gigs-design-system`.
-- `pnpm lint:values` bans raw hex/rgb and arbitrary Tailwind values: use tokens.
+- `pnpm lint:values` bans raw hex/rgb and arbitrary Tailwind values outside `theme/`: use tokens.
 - `docs/ui-rules.md`: 44px touch targets on phones, no placeholder as a label, text under 16px stays short, one
   primary button per view, axe passes in light and dark. `pnpm qa` checks them on every route in
   `scripts/qa/routes.mjs`.

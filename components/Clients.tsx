@@ -67,7 +67,7 @@ export function Clients() {
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div className="grid gap-1">
               <p className="text-eyebrow text-ink-brand uppercase">Client management</p>
-              <h1 className="font-display text-display-sm text-ink">Clients</h1>
+              <h1 className="font-display text-display-md text-ink">Clients</h1>
               <p className="max-w-2xl text-body-md text-ink-muted">Every client and where things stand: stage, next step, open tasks and the next milestone. Drag a card to change its stage; open one for its projects and notes.</p>
               {team.id !== "studio" && <p className="text-caption text-ink-subtle">Showing {team.name} only. Switch team from the top bar.</p>}
             </div>
@@ -117,7 +117,7 @@ function Board({ clients, update }: { clients: Client[]; update: (id: string, fn
                 <h2 className="text-label-md text-ink">{s.name} <span className="text-ink-subtle tabular-nums">{here.length}</span></h2>
                 <span className="text-caption text-ink-subtle">{s.sub}</span>
               </div>
-              {here.length === 0 && <p className="rounded-xl border border-dashed border-line-strong p-4 text-center text-body-sm text-ink-subtle">No clients here</p>}
+              {here.length === 0 && <p className="border-t border-dashed border-line-dashed px-1 pt-3 text-body-sm text-ink-subtle">No clients here</p>}
               {here.map((c) => <ClientCard key={c.id} c={c} update={update} />)}
             </Column>
           );
@@ -131,7 +131,7 @@ function Board({ clients, update }: { clients: Client[]; update: (id: string, fn
 function Column({ name, onDrop, children }: { name: string; onDrop: (id: string) => void; children: React.ReactNode }) {
   const [over, setOver] = React.useState(false);
   return (
-    <li data-stage={name} className={cx("flex w-64 shrink-0 flex-col gap-3 rounded-2xl bg-surface-sunken p-3 transition-shadow duration-fast", over && "ring-2 ring-ink-brand")}
+    <li data-stage={name} className={cx("flex w-64 shrink-0 flex-col gap-2 border-t-4 border-line-strong pt-3 transition-colors duration-fast", over && "bg-surface-selected")}
       onDragOver={(e) => { if (e.dataTransfer.types.includes(DRAG)) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setOver(true); } }}
       onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setOver(false); }}
       onDrop={(e) => { e.preventDefault(); setOver(false); const id = e.dataTransfer.getData(DRAG); if (id) onDrop(id); }}>
@@ -146,7 +146,7 @@ function ClientCard({ c, update }: { c: Client; update: (id: string, fn: (c: Cli
   const count = c.linked.length + c.local.length;
   return (
     <article draggable onDragStart={(e) => { e.dataTransfer.setData(DRAG, c.id); e.dataTransfer.effectAllowed = "move"; }}
-      className="group relative grid cursor-grab gap-2 rounded-xl border border-line bg-surface p-4 shadow-xs transition duration-base hover:shadow-md active:cursor-grabbing">
+      className="group relative grid cursor-grab gap-2 border-t border-line bg-surface px-3 pt-3 pb-4 transition-colors duration-fast hover:bg-surface-hover active:cursor-grabbing">
       <GripVertical aria-hidden="true" className="absolute top-2 left-1 size-4 text-ink-subtle opacity-0 transition-opacity group-hover:opacity-100" />
       <div className="flex items-start justify-between gap-2">
         <h3 className="font-display text-heading-md text-ink">
@@ -203,7 +203,7 @@ function ClientPage({ client: c, update, onNewProject }: { client: Client; updat
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="grid gap-1">
             <p className="text-eyebrow text-ink-brand uppercase">{c.industry.split("·")[0].trim()}</p>
-            <h1 className="font-display text-display-sm text-ink">{c.name}</h1>
+            <h1 className="font-display text-display-md text-ink">{c.name}</h1>
             <p className="max-w-2xl text-body-md text-ink-muted">{c.summary}</p>
             {c.sample && <p className="text-caption text-ink-subtle">A fictional sample client.</p>}
           </div>
@@ -229,7 +229,7 @@ function ClientPage({ client: c, update, onNewProject }: { client: Client; updat
         </TabList>
 
         <TabPanel value="overview" className="grid gap-6 pt-6 lg:grid-cols-2">
-          <section aria-labelledby="ms-h" className="rounded-2xl border border-line bg-surface p-5">
+          <section aria-labelledby="ms-h" className="border-t-2 border-line-strong pt-4">
             <h2 id="ms-h" className="font-display text-heading-lg text-ink">Milestones</h2>
             {c.milestones.length === 0 ? <p className="mt-2 text-body-sm text-ink-muted">No milestones yet.</p> : (
               <ol className="mt-4 grid gap-0">
@@ -238,7 +238,7 @@ function ClientPage({ client: c, update, onNewProject }: { client: Client; updat
                     {i < all.length - 1 && <span aria-hidden="true" className="absolute top-7 bottom-0 left-3 w-px bg-line" />}
                     <button type="button" aria-pressed={m.done} aria-label={`${m.title}: mark ${m.done ? "not done" : "done"}`}
                       onClick={() => set((x) => ({ ...x, milestones: x.milestones.map((y) => (y.id === m.id ? { ...y, done: !y.done } : y)) }))}
-                      className={cx("relative grid size-6 shrink-0 place-items-center rounded-full border-2 transition-colors before:absolute before:-inset-2.5", m.done ? "border-ink-brand bg-ink-brand text-bg" : "border-line-strong bg-surface hover:border-ink-brand")}>
+                      className={cx("relative grid size-6 shrink-0 place-items-center rounded-full border-2 transition-colors before:absolute before:-inset-2.5", m.done ? "border-ink bg-ink text-bg" : "border-line-strong bg-surface hover:border-ink-brand")}>
                       {m.done && <Check className="size-3.5" aria-hidden="true" />}
                     </button>
                     <div className="grid">
@@ -251,12 +251,12 @@ function ClientPage({ client: c, update, onNewProject }: { client: Client; updat
             )}
           </section>
           <div className="grid content-start gap-6">
-            <section aria-labelledby="who-h" className="rounded-2xl border border-line bg-surface p-5">
+            <section aria-labelledby="who-h" className="border-t-2 border-line-strong pt-4">
               <h2 id="who-h" className="font-display text-heading-lg text-ink">People</h2>
               <ul className="mt-3 grid gap-2">{c.contacts.map((p) => <li key={p.name} className="flex items-center gap-3"><Monogram name={p.name} /><span className="text-body-md text-ink">{p.name}</span><span className="text-body-sm text-ink-subtle">{p.role}</span></li>)}</ul>
             </section>
             {c.links.length > 0 && (
-              <section aria-labelledby="links-h" className="rounded-2xl border border-line bg-surface p-5">
+              <section aria-labelledby="links-h" className="border-t-2 border-line-strong pt-4">
                 <h2 id="links-h" className="font-display text-heading-lg text-ink">Links</h2>
                 <ul className="mt-2 grid">{c.links.map((l) => <li key={l.href}><a href={l.href} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center gap-2 text-body-md text-link underline-offset-2 hover:underline">{l.label}<ExternalLink className="size-3.5" aria-hidden="true" /></a></li>)}</ul>
               </section>
@@ -277,7 +277,7 @@ function ClientPage({ client: c, update, onNewProject }: { client: Client; updat
               <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {linked.map((p) => (
                   <li key={p.id}>
-                    <a href={p.href} target="_blank" rel="noreferrer" className="group grid h-full gap-1 rounded-2xl border border-line bg-surface p-4 transition duration-base hover:-translate-y-0.5 hover:shadow-lg motion-reduce:hover:translate-y-0">
+                    <a href={p.href} target="_blank" rel="noreferrer" className="group grid h-full gap-1 border-t-2 border-line-strong bg-surface px-1 pt-3 pb-4 transition-colors duration-fast hover:bg-surface-hover">
                       <span className="flex items-start justify-between gap-2"><b className="font-display text-heading-md text-ink">{p.name}</b><ArrowUpRight className="size-4 shrink-0 text-ink-subtle group-hover:text-ink" aria-hidden="true" /></span>
                       <span className="line-clamp-2 text-body-sm text-ink-muted">{p.summary}</span>
                     </a>
@@ -305,7 +305,7 @@ function TemplateProject({ p, onChange }: { p: LocalProject; onChange: (p: Local
   const pct = Math.round(progressOf(p) * 100);
   const type = projectTypes.find((t) => t.id === p.type);
   return (
-    <article className="rounded-2xl border border-line bg-surface p-5">
+    <article className="border-t-2 border-line-strong pt-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="font-display text-heading-lg text-ink">{p.name}</h3>
         <span className="text-caption text-ink-subtle">{type?.name} · starts {shortDate(p.start)} · in this browser</span>
@@ -338,7 +338,7 @@ function Tick({ label, done, onToggle }: { label: string; done: boolean; onToggl
   return (
     <button type="button" role="checkbox" aria-checked={done} onClick={onToggle}
       className="flex min-h-11 w-full items-center gap-3 rounded-md px-2 text-left transition-colors duration-fast hover:bg-surface-hover">
-      <span aria-hidden="true" className={cx("grid size-6 shrink-0 place-items-center rounded-md border-2 transition-colors duration-fast", done ? "border-ink-brand bg-ink-brand text-bg" : "border-line-strong")}>
+      <span aria-hidden="true" className={cx("grid size-6 shrink-0 place-items-center rounded-md border-2 transition-colors duration-fast", done ? "border-ink bg-ink text-bg" : "border-line-strong")}>
         {done && <Check className="size-4" />}
       </span>
       <span className={cx("min-w-0 text-body-md", done ? "text-ink-subtle line-through" : "text-ink")}>{label}</span>
@@ -408,7 +408,7 @@ function Notes({ c, set }: { c: Client; set: (fn: (c: Client) => Client) => void
       {notes.length === 0 ? <p className="text-body-md text-ink-muted">No notes yet.</p> : (
         <ol className="grid gap-3">
           {notes.map((n) => (
-            <li key={n.id} className="rounded-2xl border border-line bg-surface p-4">
+            <li key={n.id} className="border-t border-line pt-3">
               <p className="text-caption text-ink-subtle">{n.by} · {new Date(n.at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</p>
               <p className="mt-1 text-body-md whitespace-pre-line text-ink">{n.text}</p>
             </li>

@@ -34,7 +34,7 @@ export function Templates() {
     <Shell sidebar={sidebar} sidebarTitle="Templates" status={<span>{gallery.length} templates · the standard is in docs/templates/client-project.md</span>}>
       <div className="grid gap-1">
         <p className="text-eyebrow text-ink-brand uppercase">Client management</p>
-        <h1 className="font-display text-display-sm text-ink">Templates</h1>
+        <h1 className="font-display text-display-md text-ink">Templates</h1>
         <p className="max-w-2xl text-body-md text-ink-muted">Start a client project the way we start every project: the phases, the checks and a working example to build from.</p>
       </div>
       <ul className="mt-8 grid gap-6 lg:grid-cols-2">

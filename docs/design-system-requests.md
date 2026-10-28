@@ -27,3 +27,10 @@ when the palette opens until then.
 
 `AppShell` has no status bar. `components/Shell.tsx` lays out its own top bar, side bars, work area and bottom
 status bar with the system's pieces. A system `AppShell` with an optional `statusBar` would replace it.
+
+## A second brand on the same components
+
+This app is branded Swiss Grid (`theme/swiss-grid.css`) by redefining the system's token names after importing it.
+Two things would make that cleaner upstream: the display typeface's width (Archivo condensed) has no token, so the
+theme sets `font-stretch` on `.font-display`; and the `Logo` component only draws the Between Gigs mark, so the app
+has its own `components/Wordmark.tsx`. Request: a `--font-display-stretch` token, and a brand slot for `Logo`.
