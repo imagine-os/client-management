@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { shortDate, useClients } from "@/lib/clients";
 import { scoped, teamStore, teams, useTeam } from "@/lib/team";
+import { isOverdue, people } from "@/lib/tasks";
 import { Wordmark } from "./Wordmark";
 
 /*
@@ -182,7 +183,7 @@ function Notifications() {
           <section className="grid gap-0.5">
             {due.map(({ c, t }) => (
               <button key={`${c.id}-${t.id}`} type="button" className={row} onClick={() => go(`/?c=${c.id}&tab=tasks`)}>
-                <CalendarClock /><span className="grid min-w-0"><span className="text-body-sm text-ink">{t.title}</span><span className="text-caption text-ink-subtle">{c.name} · due {shortDate(t.due!)}{t.owner ? ` · ${t.owner}` : ""}</span></span>
+                <CalendarClock /><span className="grid min-w-0"><span className="text-body-sm text-ink">{t.title}</span><span className="text-caption text-ink-subtle">{c.name} · {isOverdue(t) ? <b className="font-semibold text-danger">overdue since {shortDate(t.due!)}</b> : `due ${shortDate(t.due!)}`}{t.owner ? ` · ${people.find((p) => p.id === t.owner)?.name ?? t.owner}` : ""}</span></span>
               </button>
             ))}
           </section>

@@ -147,9 +147,13 @@ const seed: Client[] = [
 const KEY = "cm-clients-v2";
 let cache: Client[] | null = null;
 const listeners = new Set<() => void>();
+/** Saved data we can use: a list of clients, each with an id, a name and lists where lists belong. Anything else is ignored. */
+const usable = (v: unknown): v is Client[] =>
+  Array.isArray(v) && v.length > 0 && v.every((c) => c && typeof c === "object" && typeof c.id === "string" && typeof c.name === "string"
+    && ["tasks", "milestones", "notes", "contacts", "links", "local", "linked"].every((k) => Array.isArray(c[k])));
 const read = (): Client[] => {
   if (cache) return cache;
-  try { const raw = localStorage.getItem(KEY); cache = raw ? (JSON.parse(raw) as Client[]) : structuredClone(seed); } catch { cache = structuredClone(seed); }
+  try { const raw = localStorage.getItem(KEY); const saved = raw ? JSON.parse(raw) : null; cache = usable(saved) ? saved : structuredClone(seed); } catch { cache = structuredClone(seed); }
   return cache;
 };
 const write = (next: Client[]) => {
@@ -167,7 +171,10 @@ export function useClients() {
     sync();
     setReady(true); // eslint-disable-line react-hooks/set-state-in-effect
     listeners.add(sync);
-    return () => { listeners.delete(sync); };
+    // Another tab saved: drop this tab's copy and read theirs, so neither overwrites the other's edits.
+    const other = (e: StorageEvent) => { if (e.key === KEY || e.key === null) { cache = null; sync(); } };
+    window.addEventListener("storage", other);
+    return () => { listeners.delete(sync); window.removeEventListener("storage", other); };
   }, []);
   const update = React.useCallback((id: string, fn: (c: Client) => Client) => write(read().map((c) => (c.id === id ? fn(c) : c))), []);
   const add = React.useCallback((c: Client) => write([...read(), c]), []);
@@ -190,5 +197,7 @@ export function useClients() {
   return { clients, ready, update, add, reset, addProject, updateTask, addTask, removeTask, moveTask };
 }
 
+/** "1 client", "5 clients": a count with its noun in the right number. */
+export const count = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 export const uid = () => Math.random().toString(36).slice(2, 9);
 export const shortDate = (iso: string) => new Date(iso.length === 10 ? `${iso}T12:00:00` : iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });

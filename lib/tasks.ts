@@ -27,6 +27,8 @@ export const priorities: { id: TaskPriority; name: string; rank: number }[] = [
   { id: "low", name: "Low", rank: 3 },
 ];
 
+/** A task's name for display; one saved before names were required may be empty. */
+export const titleOf = (t: ClientTask) => t.title.trim() || "Untitled task";
 export const statusOf = (t: ClientTask): TaskStatus => t.status ?? (t.done ? "done" : "todo");
 export const statusName = (s: TaskStatus) => statuses.find((x) => x.id === s)!.name;
 export const priorityName = (p?: TaskPriority) => priorities.find((x) => x.id === p)?.name ?? "No priority";

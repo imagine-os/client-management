@@ -63,6 +63,38 @@ export async function flow({ browser, base }) {
       await page.locator('[data-column="In progress"]').dispatchEvent("drop", { dataTransfer: dt });
       await page.locator('[data-column="In progress"]').getByText("Send the menu photos").waitFor();
     });
+    await step("an emptied task name keeps the last one", async () => {
+      await page.goto(`${base}/tasks/`);
+      await page.getByRole("button", { name: "Discovery call", exact: true }).click();
+      const panel = page.getByRole("dialog", { name: "Task" });
+      await panel.getByLabel("Name").fill("");
+      await panel.getByText("A task needs a name").waitFor();
+      await panel.getByRole("button", { name: "Done", exact: true }).click();
+      await page.getByRole("button", { name: "Discovery call", exact: true }).waitFor();
+    });
+    await step("a task added in a saved view stays in it", async () => {
+      await page.goto(`${base}/tasks/?saved=waiting`);
+      await page.getByRole("button", { name: /^Add task to/ }).first().click();
+      await page.getByLabel(/^New task in/).fill("Sign the contract");
+      await page.getByRole("button", { name: "Add", exact: true }).click();
+      await page.getByRole("button", { name: "Sign the contract", exact: true }).waitFor();
+    });
+    await step("the done column says how many are hidden", async () => {
+      await page.goto(`${base}/tasks/`);
+      await page.getByRole("radio", { name: "Board" }).click();
+      await page.locator('[data-column="Done"]').getByText(/done tasks? hidden/).waitFor();
+    });
+    await step("reset asks first", async () => {
+      await page.goto(`${base}/`);
+      await page.getByRole("button", { name: "Reset sample" }).click();
+      await page.getByRole("dialog", { name: /Reset every client/ }).getByRole("button", { name: "Cancel" }).click();
+      await page.getByRole("link", { name: "QA Bakery" }).first().waitFor();
+    });
+    await step("closing New project clears it from the address", async () => {
+      await page.goto(`${base}/?new=1&type=website`);
+      await page.getByRole("dialog", { name: "New project" }).getByRole("button", { name: "Cancel" }).click();
+      await page.waitForURL((u) => !u.searchParams.has("new"));
+    });
     await step("approve a milestone in the portal", async () => {
       await page.goto(`${base}/portal/?c=northlight`);
       await page.getByRole("button", { name: "Approve this milestone" }).click();
@@ -79,6 +111,23 @@ export async function flow({ browser, base }) {
       const id = new URL(page.url()).searchParams.get("c");
       await page.goto(`${base}/portal/?c=${id}`);
       await page.getByText("Send the menu photos").waitFor();
+    });
+    await step("an edit in one tab shows in another", async () => {
+      const other = await context.newPage();
+      await other.goto(`${base}/?c=harbor`);
+      await other.getByRole("heading", { level: 1, name: "Harbor & Co." }).waitFor();
+      await page.goto(`${base}/?c=harbor&tab=notes`);
+      await page.getByLabel("Add a note").fill("Called them back");
+      await page.getByRole("button", { name: "Save note" }).click();
+      await other.getByRole("tab", { name: /^Notes/ }).click();
+      await other.getByText("Called them back").waitFor();
+      await other.close();
+    });
+    await step("unreadable saved data falls back to the sample", async () => {
+      await page.evaluate(() => localStorage.setItem("cm-clients-v2", JSON.stringify({ broken: true })));
+      await page.goto(`${base}/`);
+      await page.getByRole("link", { name: "Between Gigs" }).first().waitFor();
+      await page.evaluate(() => localStorage.removeItem("cm-clients-v2"));
     });
   } catch { /* recorded in problems */ }
   await context.close();

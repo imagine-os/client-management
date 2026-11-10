@@ -1,11 +1,12 @@
 "use client";
-import { Badge, Button, Field, IconButton, Input, Menu, Modal, RadioGroup, SegmentedControl, Select, Skeleton, Tab, TabList, TabPanel, Tabs, Table, Textarea, cx, useToast, type Column } from "@ds/components";
+import { Badge, Button, ConfirmDialog, Field, IconButton, Input, Menu, Modal, RadioGroup, SegmentedControl, Select, Skeleton, Tab, TabList, TabPanel, Tabs, Table, Textarea, cx, useToast, type Column } from "@ds/components";
 import { ArrowRight, ArrowUpRight, Briefcase, CalendarClock, Check, Columns3, ExternalLink, FileText, FolderPlus, GripVertical, LayoutGrid, List, ListTodo, MessageSquare, MonitorSmartphone, MoreHorizontal, Plus, RotateCcw, Table2, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
-import { shortDate, stageTone, stages, uid, useClients, type Client, type ClientStage } from "@/lib/clients";
-import { scoped, useTeam } from "@/lib/team";
+import { count, shortDate, stageTone, stages, uid, useClients, type Client, type ClientStage } from "@/lib/clients";
+import { scoped, teamStore, useTeam } from "@/lib/team";
+import { today } from "@/lib/tasks";
 import { progressOf, projectTypes, templateFor, type LocalProject, type ProjectType } from "@/lib/template";
 import { MainNav, PageHeader, Shell, SideLink, SideSection } from "./Shell";
 import { Tick } from "./tasks/parts";
@@ -35,6 +36,7 @@ export function Clients() {
   const [view, setView] = React.useState<ClientView>("board");
   const [newProject, setNewProject] = React.useState(params.get("new") === "1");
   const [newClient, setNewClient] = React.useState(false);
+  const [confirmReset, setConfirmReset] = React.useState(false);
   React.useEffect(() => { try { const v = localStorage.getItem(VIEW_KEY); if (v === "board" || v === "list" || v === "grid" || v === "table") setView(v); } catch { /* ignore */ } }, []); // eslint-disable-line react-hooks/set-state-in-effect
 
   const sidebar = (
@@ -47,27 +49,38 @@ export function Clients() {
     </>
   );
 
+  // Opened from a link (?new=1, Templates → Use template): once it's closed, take that out of the address so a refresh
+  // or Back doesn't open it again.
+  const clearNewParams = () => {
+    if (!params.has("new")) return;
+    const next = new URLSearchParams(params.toString());
+    ["new", "type", "name"].forEach((k) => next.delete(k));
+    const q = next.toString();
+    router.replace(q ? `/?${q}` : "/");
+  };
   const openTasks = clients.reduce((n, c) => n + c.tasks.filter((t) => !t.done).length, 0);
   const commands = clients.map((c) => ({ id: `client-${c.id}`, label: c.name, group: "Clients", icon: <Users />, keywords: `${c.industry} ${c.summary}`, onRun: () => router.push(`/?c=${c.id}`) }));
 
   return (
     <Shell sidebar={sidebar} sidebarTitle="Clients" commands={commands}
       inspectorTitle={client ? "Client details" : "This week"} inspector={ready ? (client ? <ClientFacts client={client} /> : <Week clients={clients} />) : undefined}
-      status={<><span>{clients.length} clients · {openTasks} open tasks</span><span className="max-sm:hidden">Sample clients are fictional; edits are kept in this browser</span></>}>
+      status={<><span>{count(clients.length, "client")} · {count(openTasks, "open task")}</span><span className="max-sm:hidden">Sample clients are fictional; edits are kept in this browser</span></>}>
       {!ready ? (
         <div aria-busy="true" aria-label="Loading clients" className="grid gap-4"><Skeleton className="h-10 w-1/3" /><Skeleton shape="block" className="h-80" /></div>
       ) : client ? (
         <ClientPage key={client.id} client={client} update={update} onNewProject={() => setNewProject(true)} />
+      ) : id ? (
+        <MissingClient hidden={everyone.find((c) => c.id === id)} team={team.name} />
       ) : (
         <>
-          <PageHeader eyebrow={`${clients.length} ${clients.length === 1 ? "client" : "clients"} · ${openTasks} open tasks`} title="Clients"
+          <PageHeader eyebrow={`${count(clients.length, "client")} · ${count(openTasks, "open task")}`} title="Clients"
             description="Where every client stands and what's next. Drag a card to change its stage; open one for its projects, tasks and notes."
             note={team.id !== "studio" ? <p className="text-caption text-ink-subtle">Showing {team.name} only. Switch team from the top bar.</p> : undefined}
             actions={<><Button variant="secondary" iconStart={<Plus />} onClick={() => setNewClient(true)}>Add client</Button><Button variant="primary" iconStart={<FolderPlus />} onClick={() => setNewProject(true)}>New project</Button></>} />
           <div className="mt-6 flex flex-wrap items-center justify-between gap-2">
             <SegmentedControl label="View" size="sm" value={view} onChange={(v) => { setView(v as ClientView); try { localStorage.setItem(VIEW_KEY, v); } catch { /* ignore */ } }}
               options={[{ value: "board", label: "Board", icon: <Columns3 /> }, { value: "list", label: "List", icon: <List /> }, { value: "grid", label: "Grid", icon: <LayoutGrid /> }, { value: "table", label: "Table", icon: <Table2 /> }]} />
-            <Button size="sm" variant="ghost" iconStart={<RotateCcw />} onClick={() => { reset(); toast({ message: "Clients reset to the sample", tone: "success" }); }}>Reset sample</Button>
+            <Button size="sm" variant="ghost" iconStart={<RotateCcw />} onClick={() => setConfirmReset(true)}>Reset sample</Button>
           </div>
           {view === "board" && <Board clients={clients} update={update} />}
           {view === "list" && <ClientList clients={clients} />}
@@ -75,7 +88,7 @@ export function Clients() {
           {view === "table" && <ClientTable clients={clients} />}
         </>
       )}
-      <NewProjectDialog open={newProject} onClose={() => setNewProject(false)} clients={clients} defaultClient={client?.id}
+      <NewProjectDialog open={newProject} onClose={() => { setNewProject(false); clearNewParams(); }} clients={clients} defaultClient={client?.id}
         defaultType={(projectTypes.find((t) => t.id === params.get("type"))?.id)} defaultName={params.get("name") ?? undefined}
         onCreate={(clientId, p) => {
           const project = addProject(clientId, p);
@@ -83,7 +96,15 @@ export function Clients() {
           toast({ message: `${project.name} started from the template`, tone: "success" });
           router.push(`/?c=${clientId}&tab=projects`);
         }} />
-      <NewClientDialog open={newClient} onClose={() => setNewClient(false)} onCreate={(c) => { add(c); setNewClient(false); router.push(`/?c=${c.id}`); }} />
+      <NewClientDialog open={newClient} onClose={() => setNewClient(false)} onCreate={(c) => {
+        add(c); setNewClient(false);
+        // A new client belongs to the studio, not the Between Gigs team: show every client so its page can open.
+        if (team.id !== "studio") { teamStore.set("studio"); toast({ message: `${c.name} added. Showing every client so you can see it.`, tone: "success" }); }
+        router.push(`/?c=${c.id}`);
+      }} />
+      <ConfirmDialog open={confirmReset} onCancel={() => setConfirmReset(false)} tone="danger" title="Reset every client to the sample?" confirmLabel="Reset to the sample"
+        description="Clients you added, projects you started, and every task, note and stage change made in this browser will be gone. This can't be undone."
+        onConfirm={() => { reset(); setConfirmReset(false); toast({ message: "Clients reset to the sample", tone: "success" }); }} />
     </Shell>
   );
 }
@@ -230,12 +251,16 @@ function ClientList({ clients }: { clients: Client[] }) {
   );
 }
 
+/** A client page's tabs; an unknown ?tab= falls back to Overview. */
+const tabs = ["overview", "projects", "tasks", "notes"];
+const pick = (t: string | null) => (t && tabs.includes(t) ? t : "overview");
+
 function ClientPage({ client: c, update, onNewProject }: { client: Client; update: (id: string, fn: (c: Client) => Client) => void; onNewProject: () => void }) {
   const params = useSearchParams();
-  const [tab, setTab] = React.useState(params.get("tab") ?? "overview");
+  const [tab, setTab] = React.useState(() => pick(params.get("tab")));
   // A link to a tab (?tab=projects, e.g. right after New project) switches to it.
   const wanted = params.get("tab");
-  React.useEffect(() => { if (wanted) setTab(wanted); }, [wanted]); // eslint-disable-line react-hooks/set-state-in-effect
+  React.useEffect(() => { if (wanted) setTab(pick(wanted)); }, [wanted]); // eslint-disable-line react-hooks/set-state-in-effect
   const set = (fn: (c: Client) => Client) => update(c.id, fn);
   const linked = c.linked;
   const open = c.tasks.filter((t) => !t.done);
@@ -287,7 +312,7 @@ function ClientPage({ client: c, update, onNewProject }: { client: Client; updat
           <div className="grid content-start gap-6">
             <section aria-labelledby="who-h" className="border-t-2 border-line-strong pt-4">
               <h2 id="who-h" className="font-display text-heading-lg text-ink">People</h2>
-              <ul className="mt-3 grid gap-1">{c.contacts.map((p) => <li key={p.name} className="flex min-h-8 items-center gap-3"><Monogram name={p.name} /><span className="text-body-md text-ink">{p.name}</span><span className="text-body-sm text-ink-subtle">{p.role}</span></li>)}</ul>
+              {c.contacts.length === 0 ? <p className="mt-2 text-body-sm text-ink-muted">No one added yet.</p> : <ul className="mt-3 grid gap-1">{c.contacts.map((p) => <li key={p.name} className="flex min-h-8 items-center gap-3"><Monogram name={p.name} /><span className="text-body-md text-ink">{p.name}</span><span className="text-body-sm text-ink-subtle">{p.role}</span></li>)}</ul>}
             </section>
             {c.links.length > 0 && (
               <section aria-labelledby="links-h" className="border-t-2 border-line-strong pt-4">
@@ -443,7 +468,8 @@ function NewProjectDialog({ open, onClose, clients, defaultClient, defaultType, 
   const [clientId, setClientId] = React.useState(defaultClient ?? clients[0]?.id ?? "");
   const [name, setName] = React.useState("");
   const [type, setType] = React.useState<ProjectType>("website");
-  const [start, setStart] = React.useState(() => new Date().toISOString().slice(0, 10));
+  const [start, setStart] = React.useState(today);
+  const [startErr, setStartErr] = React.useState<string>();
   const [err, setErr] = React.useState<string>();
   // From the template gallery, the type (and maybe a name) arrive chosen.
   React.useEffect(() => {
@@ -455,13 +481,13 @@ function NewProjectDialog({ open, onClose, clients, defaultClient, defaultType, 
   const plan = templateFor(type);
   return (
     <Modal open={open} onClose={onClose} size="lg" title="New project" description="Starts from the standard client project template. You can tick things off as the project moves."
-      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button variant="primary" iconStart={<FolderPlus />} onClick={() => { if (!name.trim()) { setErr("Give the project a name."); return; } onCreate(clientId, { name: name.trim(), type, start }); setName(""); }}>Create project</Button></>}>
+      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button variant="primary" iconStart={<FolderPlus />} onClick={() => { if (!name.trim()) { setErr("Give the project a name."); return; } if (!start) { setStartErr("Pick the day the project starts."); return; } onCreate(clientId, { name: name.trim(), type, start }); setName(""); }}>Create project</Button></>}>
       <div className="grid gap-5 md:grid-cols-2">
         <div className="grid content-start gap-4">
           <Field label="Client"><Select value={clientId} onChange={(e) => setClientId(e.target.value)} options={clients.map((c) => ({ value: c.id, label: c.name }))} /></Field>
           <Field label="Project name" error={err}><Input value={name} onChange={(e) => { setName(e.target.value); setErr(undefined); }} placeholder="e.g. Portfolio site" /></Field>
           <RadioGroup name="np-type" label="Type" value={type} onChange={(v) => setType(v as ProjectType)} options={projectTypes.map((t) => ({ value: t.id, label: t.name, description: t.sub }))} />
-          <Field label="Start date"><Input type="date" value={start} onChange={(e) => setStart(e.target.value)} /></Field>
+          <Field label="Start date" error={startErr}><Input type="date" value={start} onChange={(e) => { setStart(e.target.value); setStartErr(undefined); }} /></Field>
         </div>
         <section aria-labelledby="np-plan" className="rounded-2xl bg-surface-sunken p-4">
           <h3 id="np-plan" className="flex items-center gap-2 text-label-md text-ink"><FileText className="size-4 text-ink-brand" aria-hidden="true" />What the template sets up</h3>
@@ -495,5 +521,20 @@ function NewClientDialog({ open, onClose, onCreate }: { open: boolean; onClose: 
         <Field label="What they do" optional><Input value={industry} onChange={(e) => setIndustry(e.target.value)} placeholder="e.g. Restaurant group" /></Field>
       </div>
     </Modal>
+  );
+}
+
+/** A link to a client that isn't in view: gone (an old link), or hidden by the team switch. */
+function MissingClient({ hidden, team }: { hidden?: Client; team: string }) {
+  return (
+    <div className="grid max-w-xl gap-4 border-t-4 border-line-strong pt-6">
+      <p className="text-eyebrow text-ink-brand uppercase">{hidden ? "Hidden by team" : "Not found"}</p>
+      <h1 className="font-display text-display-sm text-ink">{hidden ? `${hidden.name} isn't in the ${team} view` : "We can't find that client"}</h1>
+      <p className="text-body-md text-ink-muted">{hidden ? `${team} only shows the Between Gigs client. Switch to JAM Studio to see every client.` : "The link may be old, or the client was added in another browser. Clients are kept in each browser until there's a backend."}</p>
+      <div className="flex flex-wrap gap-2">
+        {hidden && <Button variant="primary" iconStart={<Users />} onClick={() => teamStore.set("studio")}>Show all clients</Button>}
+        <Link href="/" className="inline-flex h-10 items-center border border-line-strong px-4 text-label-md text-ink hover:bg-surface-hover">All clients</Link>
+      </div>
+    </div>
   );
 }

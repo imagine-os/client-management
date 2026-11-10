@@ -3,7 +3,7 @@ import { Button, Field, Input, Modal, Select, Skeleton, useToast } from "@ds/com
 import { Bookmark, Plus } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
-import { uid, useClients, type TaskPriority, type TaskStatus } from "@/lib/clients";
+import { count, uid, useClients, type TaskPriority, type TaskStatus } from "@/lib/clients";
 import { scoped, useTeam } from "@/lib/team";
 import { applyFilters, noFilters, people, presets, priorities, rowsOf, statuses, withStatus } from "@/lib/tasks";
 import { MainNav, PageHeader, Shell, SideLink, SideSection } from "./Shell";
@@ -40,9 +40,9 @@ export function TasksPage() {
   ];
 
   return (
-    <Shell sidebar={sidebar} sidebarTitle="Tasks" commands={commands} status={<><span>{open} open tasks across {clients.length} clients</span><span className="max-sm:hidden">Kept in this browser</span></>}>
+    <Shell sidebar={sidebar} sidebarTitle="Tasks" commands={commands} status={<><span>{count(open, "open task")} across {count(clients.length, "client")}</span><span className="max-sm:hidden">Kept in this browser</span></>}>
       <div className="grid gap-6">
-        <PageHeader eyebrow={saved.id === "open" ? `${open} open across ${clients.length} clients` : "Saved view"} title={saved.id === "open" ? "Tasks" : saved.name}
+        <PageHeader eyebrow={saved.id === "open" ? `${open} open across ${count(clients.length, "client")}` : "Saved view"} title={saved.id === "open" ? "Tasks" : saved.name}
           description="Everything we and our clients have to do. Switch views, filter and group; open a task for its details and subtasks."
           actions={<Button variant="primary" iconStart={<Plus />} onClick={() => setCreating(true)}>New task</Button>} />
         {!ready ? <div aria-busy="true" aria-label="Loading tasks" className="grid gap-3"><Skeleton className="h-10 w-1/2" /><Skeleton shape="block" className="h-80" /></div>

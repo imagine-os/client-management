@@ -25,5 +25,11 @@ export const routes = [
   { name: "templates", path: "/templates/", ready: "main h1" },
   { name: "portal", path: "/portal/?c=between-gigs", ready: "#hello-h" },
   { name: "portal-sample", path: "/portal/?c=kestrel", ready: "#hello-h" },
+  // Edge cases (docs/edge-cases-2026-11-10.md).
+  { name: "client-missing", path: "/?c=no-such-client", ready: "main h1" },
+  { name: "client-hidden-by-team", path: "/?c=harbor", ready: "main h1", act: async (page) => { await page.evaluate(() => localStorage.setItem("cm-team", "between-gigs")); await page.reload(); await page.getByRole("button", { name: "Show all clients" }).waitFor(); } },
+  { name: "client-bad-tab", path: "/?c=between-gigs&tab=nope", ready: "#ms-h" },
+  { name: "tasks-no-results", path: "/tasks/", ready: "main h1", act: async (page) => { await page.getByLabel("Search tasks").fill("zzzz"); await page.getByText("No tasks match").waitFor(); } },
+  { name: "portal-no-milestones", path: "/portal/?c=harbor", ready: "#hello-h" },
   { name: "not-found", path: "/nowhere/", ready: "h1" },
 ];

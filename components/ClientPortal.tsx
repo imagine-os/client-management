@@ -51,9 +51,9 @@ export function ClientPortal() {
             <p className="max-w-prose text-body-lg text-ink-muted">{c.nextStep}</p>
           </div>
           <div className="grid justify-items-center gap-2 md:col-span-4">
-            <span role="img" aria-label={`${done} of ${ms.length} milestones done`} style={{ "--p": pct } as React.CSSProperties} className="progress-ring grid size-36 place-items-center rounded-full">
+            {ms.length === 0 ? <p className="max-w-56 text-center text-body-sm text-ink-muted">Milestones show here once the first one is planned.</p> : <span role="img" aria-label={`${done} of ${ms.length} milestones done`} style={{ "--p": pct } as React.CSSProperties} className="progress-ring grid size-36 place-items-center rounded-full">
               <span className="grid size-30 place-items-center rounded-full bg-surface text-center"><span><b className="block font-display text-display-sm text-ink tabular-nums">{pct}%</b><span className="text-caption text-ink-subtle">{done} of {ms.length} milestones</span></span></span>
-            </span>
+            </span>}
           </div>
         </section>
 
@@ -74,6 +74,7 @@ export function ClientPortal() {
 
           <section aria-labelledby="ms-h" className="border-t-2 border-line-strong pt-4">
             <h2 id="ms-h" className="font-display text-heading-lg text-ink">Milestones</h2>
+            {ms.length === 0 && <p className="mt-3 text-body-md text-ink-muted">None planned yet.</p>}
             <ol className="mt-4 grid gap-0">
               {ms.map((m, i) => (
                 <li key={m.id} className="relative flex gap-3 pb-5 last:pb-0">
@@ -92,6 +93,7 @@ export function ClientPortal() {
 
         <section aria-labelledby="up-h" className="border-t-2 border-line-strong pt-4">
           <h2 id="up-h" className="font-display text-heading-lg text-ink">Latest updates</h2>
+          {updates.length === 0 && <p className="mt-3 text-body-md text-ink-muted">No updates yet. Notes from JAM Studio show here as the work moves.</p>}
           <ol className="mt-3 grid gap-3">
             {updates.map((n) => (
               <li key={n.id} className="grid gap-0.5 border-t border-line pt-3 first:border-0 first:pt-0">

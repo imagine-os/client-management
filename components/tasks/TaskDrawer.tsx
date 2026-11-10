@@ -16,9 +16,11 @@ export function TaskDrawer({ clients, open, onClose }: { clients: Client[]; open
   const toast = useToast();
   const [confirm, setConfirm] = React.useState(false);
   const [sub, setSub] = React.useState("");
+  // What's in the name field while it's being edited. An empty name is never saved: the task keeps its last one.
+  const [name, setName] = React.useState<string | null>(null);
   // Keep the last task in the panel while it animates closed.
   const [last, setLast] = React.useState(open);
-  React.useEffect(() => { if (open) setLast(open); }, [open]); // eslint-disable-line react-hooks/set-state-in-effect
+  React.useEffect(() => { if (open) setLast(open); setName(null); }, [open]); // eslint-disable-line react-hooks/set-state-in-effect
   const target = open ?? last;
   const c = clients.find((x) => x.id === target?.clientId);
   const t = c?.tasks.find((x) => x.id === target?.taskId);
@@ -31,7 +33,10 @@ export function TaskDrawer({ clients, open, onClose }: { clients: Client[]; open
       <Drawer side="right" size="md" open={!!open} onClose={onClose} title="Task" description={<Link href={`/?c=${c.id}`} className="inline-flex min-h-11 items-center gap-1 text-link underline-offset-2 hover:underline sm:min-h-6">{c.name}<ArrowUpRight className="size-3.5" aria-hidden="true" /></Link>}
         footer={<div className="flex w-full items-center justify-between gap-2"><Button variant="ghost" iconStart={<Trash2 />} onClick={() => setConfirm(true)}>Delete task</Button><Button variant="secondary" onClick={onClose}>Done</Button></div>}>
         <div className="grid gap-5">
-          <Field label="Name"><Input id="task-name" value={t.title} onChange={(e) => set((x) => ({ ...x, title: e.target.value }))} /></Field>
+          <Field label="Name" error={name !== null && !name.trim() ? `A task needs a name. It keeps “${t.title}” until you type a new one.` : undefined}>
+            <Input id="task-name" value={name ?? t.title} onBlur={() => setName(null)}
+              onChange={(e) => { setName(e.target.value); if (e.target.value.trim()) set((x) => ({ ...x, title: e.target.value })); }} />
+          </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Status"><Select value={statusOf(t)} onValueChange={(v) => set((x) => withStatus(x, v as TaskStatus))} options={statuses.map((s) => ({ value: s.id, label: s.name }))} /></Field>
             <Field label="Priority"><Select value={t.priority ?? "none"} onValueChange={(v) => set((x) => ({ ...x, priority: v === "none" ? undefined : (v as TaskPriority) }))} options={[...priorities.map((p) => ({ value: p.id, label: p.name })), { value: "none", label: "No priority" }]} /></Field>

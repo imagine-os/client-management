@@ -28,7 +28,9 @@ export function useTeam() {
     const sync = () => setId(read());
     sync();
     subs.add(sync);
-    return () => { subs.delete(sync); };
+    const other = (e: StorageEvent) => { if (e.key === KEY || e.key === null) sync(); };
+    window.addEventListener("storage", other);
+    return () => { subs.delete(sync); window.removeEventListener("storage", other); };
   }, []);
   return teams.find((t) => t.id === id) ?? teams[0];
 }

@@ -1,10 +1,10 @@
 "use client";
-import { Badge, Button, Checkbox, Drawer, Field, IconButton, Input, Menu, Popover, SegmentedControl, Select, Switch, Table, cx, type Column } from "@ds/components";
+import { Badge, Button, Checkbox, Drawer, Field, IconButton, Input, Menu, Popover, SegmentedControl, Select, Switch, Table, cx, useToast, type Column } from "@ds/components";
 import { ArrowDownUp, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Columns3, Filter, Layers, List, Plus, Search, Table2, X } from "lucide-react";
 import * as React from "react";
 import { uid, useClients, type Client, type ClientTask, type TaskPriority, type TaskStatus } from "@/lib/clients";
 import {
-  activeFilters, applyFilters, groupRows, groupings, isoDay, noFilters, people, priorities, rowKey, rowsOf, sortRows, sortings, statusOf, statuses, today, withStatus,
+  activeFilters, applyFilters, groupRows, titleOf, groupings, isoDay, noFilters, people, priorities, rowKey, rowsOf, sortRows, sortings, statusOf, statuses, today, withStatus,
   type Filters, type Group, type GroupBy, type Row, type Sort, type SortKey,
 } from "@/lib/tasks";
 import { Assignee, DueLabel, PriorityFlag, PriorityMenu, StatusMark, StatusMenu, SubtaskCount, useStored } from "./parts";
@@ -37,6 +37,7 @@ export function TaskViews({ clients, scope, storageKey, preset, defaultView = "l
   defaultView?: ViewId;
 }) {
   const { updateTask, addTask, moveTask } = useClients();
+  const toast = useToast();
   const [prefs, setPrefs] = useStored<Prefs>(storageKey, { view: defaultView, group: "status", sort: { key: "due", direction: "asc" }, showDone: false });
   const [filters, setFilters] = React.useState<Filters>({ ...noFilters, ...preset?.filters });
   const [group, setGroup] = React.useState<GroupBy | undefined>(preset?.group);
@@ -47,7 +48,7 @@ export function TaskViews({ clients, scope, storageKey, preset, defaultView = "l
   const f = { ...filters, showDone: filters.showDone || prefs.showDone };
   const rows = sortRows(applyFilters(rowsOf(clients), f), prefs.sort);
   const groups = groupRows(rows, groupBy, clients);
-  const label = (r: Row) => r.task.title;
+  const label = (r: Row) => titleOf(r.task);
   const patch = (r: Row, fn: (t: ClientTask) => ClientTask) => updateTask(r.client.id, r.task.id, fn);
   const openRow = (r: Row) => setOpen({ clientId: r.client.id, taskId: r.task.id });
   const edits = {
@@ -64,26 +65,52 @@ export function TaskViews({ clients, scope, storageKey, preset, defaultView = "l
     else if (groupBy === "client") moveTask(r.client.id, r.task.id, g.id);
   };
   const droppable = groupBy === "status" || groupBy === "priority" || groupBy === "owner" || groupBy === "client";
-  const create = (title: string, clientId: string, g?: Group) => {
-    const t: ClientTask = { id: uid(), title, done: false, status: "todo", priority: undefined, owner: "Studio" };
-    if (g && groupBy === "status") Object.assign(t, withStatus(t, g.id as TaskStatus));
-    if (g && groupBy === "priority" && g.id !== "none") t.priority = g.id as TaskPriority;
-    if (g && groupBy === "owner") t.owner = g.id || undefined;
-    if (g && groupBy === "client") clientId = g.id;
+  /**
+   * A task added in this view. It takes the view's single filter values (one assignee, one priority, one status, one
+   * client), then the group it was added under, so it lands where it was added instead of vanishing. If it still
+   * doesn't match (a search, say), a toast says it was added but is hidden.
+   */
+  const create = (title: string, clientId: string, g?: Group, by: GroupBy = groupBy) => {
+    let t: ClientTask = { id: uid(), title, done: false, status: "todo", priority: undefined, owner: "Studio" };
+    if (filters.owners.length === 1) t.owner = filters.owners[0] || undefined;
+    if (filters.priorities.length === 1 && filters.priorities[0] !== "none") t.priority = filters.priorities[0] as TaskPriority;
+    if (filters.statuses.length === 1) t = withStatus(t, filters.statuses[0]);
+    if (filters.due === "week" || filters.due === "overdue") t.due = today();
+    if (!scope && filters.clients.length === 1) clientId = filters.clients[0];
+    if (g && by === "status") t = withStatus(t, g.id as TaskStatus);
+    if (g && by === "priority") t.priority = g.id === "none" ? undefined : (g.id as TaskPriority);
+    if (g && by === "owner") t.owner = g.id || undefined;
+    if (g && by === "client") clientId = g.id;
     addTask(clientId, t);
+    const client = clients.find((c) => c.id === clientId);
+    if (client && applyFilters([{ client, task: t }], f).length === 0) toast({ message: `Added “${title}”. It's hidden by this view's search or filters.`, tone: "neutral" });
   };
+  // Done tasks the "Show done" switch is hiding right now, so the Done group can say so instead of reading 0.
+  const hiddenDone = f.showDone ? 0 : applyFilters(rowsOf(clients), { ...f, showDone: true }).filter((r) => r.task.done).length;
+  const showDone = () => setPrefs({ ...prefs, showDone: true });
+  const narrowed = activeFilters(filters) > 0 || filters.q.trim() !== "";
   const defaultClient = scope ?? (filters.clients.length === 1 ? filters.clients[0] : clients[0]?.id ?? "");
   const total = rowsOf(clients).length;
 
   return (
     <div className="grid gap-4">
       <Toolbar clients={clients} scope={scope} prefs={prefs} setPrefs={setPrefs} filters={filters} setFilters={setFilters} groupBy={groupBy} setGroup={(g) => { setGroup(undefined); setPrefs({ ...prefs, group: g }); }} count={rows.length} />
-      <p className="text-caption text-ink-subtle" aria-live="polite">{rows.length} of {total} tasks{!f.showDone ? " · done tasks hidden" : ""}</p>
+      <p className="text-caption text-ink-subtle" aria-live="polite">{rows.length} of {total} tasks{hiddenDone > 0 ? ` · ${hiddenDone} done hidden` : ""}</p>
 
-      {prefs.view === "list" && <ListView groups={groups} grouped={groupBy !== "none"} scope={scope} label={label} edits={edits} openRow={openRow} clients={clients} defaultClient={defaultClient} create={create} />}
+      {rows.length === 0 && total > 0 && prefs.view !== "table" && (
+        <div className="grid justify-items-start gap-3 border-t-2 border-line-strong pt-4" role="status">
+          <p className="text-heading-md text-ink">No tasks match</p>
+          <p className="text-body-sm text-ink-muted">{narrowed ? "Nothing fits this search and these filters." : "Every task here is done."}{hiddenDone > 0 ? ` ${hiddenDone} done ${hiddenDone === 1 ? "task is" : "tasks are"} hidden.` : ""}</p>
+          <div className="flex flex-wrap gap-2">
+            {narrowed && <Button size="sm" variant="secondary" iconStart={<X />} onClick={() => setFilters({ ...noFilters })}>Clear search and filters</Button>}
+            {hiddenDone > 0 && <Button size="sm" variant="ghost" onClick={showDone}>Show done tasks</Button>}
+          </div>
+        </div>
+      )}
+      {prefs.view === "list" && <ListView groups={groups} grouped={groupBy !== "none"} scope={scope} label={label} edits={edits} openRow={openRow} clients={clients} defaultClient={defaultClient} create={create} hiddenDone={hiddenDone} onShowDone={showDone} />}
       {prefs.view === "board" && <BoardView groups={groupBy === "none" || groupBy === "due" ? groupRows(rows, "status", clients) : groups} droppable={droppable || groupBy === "none" || groupBy === "due"}
         onDrop={(key, g) => { const r = rows.find((x) => rowKey(x) === key); if (!r) return; if (groupBy === "none" || groupBy === "due") edits.status(r, g.id as TaskStatus); else intoGroup(r, g); }}
-        scope={scope} label={label} edits={edits} openRow={openRow} clients={clients} defaultClient={defaultClient} create={(title, c, g) => (groupBy === "none" || groupBy === "due" ? addTask(c, { id: uid(), title, done: g.id === "done", status: g.id as TaskStatus, owner: "Studio" }) : create(title, c, g))} />}
+        scope={scope} label={label} edits={edits} openRow={openRow} clients={clients} defaultClient={defaultClient} create={(title, c, g) => create(title, c, g, groupBy === "none" || groupBy === "due" ? "status" : groupBy)} hiddenDone={hiddenDone} onShowDone={showDone} />}
       {prefs.view === "table" && <TableView rows={rows} scope={scope} sort={prefs.sort} setSort={(s) => setPrefs({ ...prefs, sort: s })} label={label} edits={edits} openRow={openRow} />}
       {prefs.view === "calendar" && <CalendarView rows={rows} scope={scope} openRow={openRow} onDrop={(key, day) => { const r = rows.find((x) => rowKey(x) === key); if (r) edits.due(r, day); }} />}
 
@@ -183,8 +210,8 @@ interface ViewProps { scope?: string; label: (r: Row) => string; edits: Edits; o
 
 /* ---------- List ---------- */
 
-function ListView({ groups, grouped, scope, label, edits, openRow, clients, defaultClient, create }: ViewProps & {
-  groups: Group[]; grouped: boolean; clients: Client[]; defaultClient: string; create: (title: string, clientId: string, g?: Group) => void;
+function ListView({ groups, grouped, scope, label, edits, openRow, clients, defaultClient, create, hiddenDone, onShowDone }: ViewProps & {
+  groups: Group[]; grouped: boolean; clients: Client[]; defaultClient: string; create: (title: string, clientId: string, g?: Group) => void; hiddenDone: number; onShowDone: () => void;
 }) {
   const [closed, setClosed] = React.useState<string[]>([]);
   return (
@@ -213,7 +240,7 @@ function ListView({ groups, grouped, scope, label, edits, openRow, clients, defa
                         {/* Phones: the meta drops to a second line under the title, so the title keeps the full width. */}
                         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2">
                           <button type="button" onClick={() => openRow(r)} className="min-h-11 min-w-0 flex-1 basis-full text-left text-body-md text-ink hover:underline sm:min-h-8 sm:basis-0">
-                            <span className={cx(r.task.done && "text-ink-subtle line-through")}>{r.task.title}</span>
+                            <span className={cx(r.task.done && "text-ink-subtle line-through")}>{titleOf(r.task)}</span>
                           </button>
                           <div className="flex items-center gap-1 max-sm:-mt-2 max-sm:w-full">
                             {!scope && <span className="w-36 truncate text-caption text-ink-subtle max-lg:hidden">{r.client.name}</span>}
@@ -228,6 +255,7 @@ function ListView({ groups, grouped, scope, label, edits, openRow, clients, defa
                     ))}
                   </ul>
                 )}
+                {g.id === "done" && hiddenDone > 0 && <DoneHidden n={hiddenDone} onShow={onShowDone} />}
                 <QuickAdd id={`qa-${scope ?? "all"}-${g.id || "none"}`} clients={clients} scope={scope} defaultClient={defaultClient} onAdd={(t, c) => create(t, c, grouped ? g : undefined)} where={grouped ? g.name : undefined} />
               </>
             )}
@@ -242,6 +270,16 @@ function GroupIcon({ g }: { g: Group }) {
   if (statuses.some((s) => s.id === g.id)) return <StatusMark status={g.id as TaskStatus} />;
   if (priorities.some((p) => p.id === g.id) || g.id === "none") return <PriorityFlag priority={g.id === "none" ? undefined : (g.id as TaskPriority)} />;
   return null;
+}
+
+/** In the Done group while done tasks are hidden: how many, and a way to show them, so the group never just reads 0. */
+function DoneHidden({ n, onShow }: { n: number; onShow: () => void }) {
+  return (
+    <p className="flex flex-wrap items-center gap-x-2 px-1 py-2 text-body-sm text-ink-muted">
+      {n} done {n === 1 ? "task" : "tasks"} hidden.
+      <button type="button" onClick={onShow} className="min-h-6 text-link underline underline-offset-2 hover:no-underline">Show {n === 1 ? "it" : "them"}</button>
+    </p>
+  );
 }
 
 /** "+ Add task": opens a one-line form in place. Enter saves and keeps it open for the next one; Esc closes. */
@@ -264,8 +302,8 @@ function QuickAdd({ id, clients, scope, defaultClient, onAdd, where }: { id: str
 
 /* ---------- Board ---------- */
 
-function BoardView({ groups, droppable, onDrop, scope, label, edits, openRow, clients, defaultClient, create }: ViewProps & {
-  groups: Group[]; droppable: boolean; onDrop: (key: string, g: Group) => void; clients: Client[]; defaultClient: string; create: (title: string, clientId: string, g: Group) => void;
+function BoardView({ groups, droppable, onDrop, scope, label, edits, openRow, clients, defaultClient, create, hiddenDone, onShowDone }: ViewProps & {
+  groups: Group[]; droppable: boolean; onDrop: (key: string, g: Group) => void; clients: Client[]; defaultClient: string; create: (title: string, clientId: string, g: Group) => void; hiddenDone: number; onShowDone: () => void;
 }) {
   return (
     <div className="-mx-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
@@ -277,7 +315,7 @@ function BoardView({ groups, droppable, onDrop, scope, label, edits, openRow, cl
               <article key={rowKey(r)} draggable={droppable} onDragStart={(e) => { e.dataTransfer.setData(DRAG, rowKey(r)); e.dataTransfer.effectAllowed = "move"; }}
                 className={cx("grid gap-2 border-t border-line bg-surface px-3 pt-3 pb-3 transition-colors duration-fast hover:bg-surface-hover", droppable && "cursor-grab active:cursor-grabbing")}>
                 <button type="button" onClick={() => openRow(r)} className="min-h-11 text-left text-body-md text-ink hover:underline sm:min-h-6">
-                  <span className={cx(r.task.done && "text-ink-subtle line-through")}>{r.task.title}</span>
+                  <span className={cx(r.task.done && "text-ink-subtle line-through")}>{titleOf(r.task)}</span>
                 </button>
                 {!scope && <span className="text-caption text-ink-subtle">{r.client.name}</span>}
                 <div className="flex flex-wrap items-center gap-1">
@@ -289,6 +327,7 @@ function BoardView({ groups, droppable, onDrop, scope, label, edits, openRow, cl
                 </div>
               </article>
             ))}
+            {g.id === "done" && hiddenDone > 0 && <DoneHidden n={hiddenDone} onShow={onShowDone} />}
             <QuickAdd id={`ba-${scope ?? "all"}-${g.id || "none"}`} clients={clients} scope={scope} defaultClient={defaultClient} onAdd={(t, c) => create(t, c, g)} where={g.name} />
           </BoardColumn>
         ))}
@@ -313,12 +352,12 @@ function BoardColumn({ g, droppable, onDrop, children }: { g: Group; droppable: 
 
 function TableView({ rows, scope, sort, setSort, label, edits, openRow }: ViewProps & { rows: Row[]; sort: Sort; setSort: (s: Sort) => void }) {
   const columns: Column<Row>[] = [
-    { key: "title", header: "Task", sortable: true, cell: (r) => <button type="button" onClick={() => openRow(r)} className="min-h-11 text-left text-body-md text-ink hover:underline sm:min-h-8"><span className={cx(r.task.done && "text-ink-subtle line-through")}>{r.task.title}</span></button> },
+    { key: "title", header: "Task", sortable: true, cell: (r) => <button type="button" onClick={() => openRow(r)} className="min-h-11 text-left text-body-md text-ink hover:underline sm:min-h-8"><span className={cx(r.task.done && "text-ink-subtle line-through")}>{titleOf(r.task)}</span></button> },
     ...(scope ? [] : [{ key: "client", header: "Client", sortable: true, cell: (r: Row) => <span className="text-body-sm whitespace-nowrap text-ink-muted">{r.client.name}</span> }]),
     { key: "status", header: "Status", sortable: true, cell: (r) => <StatusMenu task={r.task} label={label(r)} onPick={(s) => edits.status(r, s)} /> },
     { key: "priority", header: "Priority", sortable: true, cell: (r) => <PriorityMenu task={r.task} label={label(r)} onPick={(p) => edits.priority(r, p)} /> },
     { key: "owner", header: "Assignee", sortable: true, cell: (r) => <Assignee owner={r.task.owner} task={label(r)} onPick={(o) => edits.owner(r, o)} /> },
-    { key: "due", header: "Due", sortable: true, cell: (r) => <Input type="date" size="sm" aria-label={`Due date for ${r.task.title}`} value={r.task.due ?? ""} className="w-36 max-sm:h-11" onChange={(e) => edits.due(r, e.target.value || undefined)} /> },
+    { key: "due", header: "Due", sortable: true, cell: (r) => <Input type="date" size="sm" aria-label={`Due date for ${titleOf(r.task)}`} value={r.task.due ?? ""} className="w-36 max-sm:h-11" onChange={(e) => edits.due(r, e.target.value || undefined)} /> },
     { key: "subtasks", header: "Subtasks", cell: (r) => <SubtaskCount task={r.task} /> },
   ];
   return (
@@ -346,8 +385,8 @@ function CalendarView({ rows, scope, openRow, onDrop }: { rows: Row[]; scope?: s
   const chip = (r: Row) => (
     <button key={rowKey(r)} type="button" draggable onDragStart={(e) => { e.dataTransfer.setData(DRAG, rowKey(r)); e.dataTransfer.effectAllowed = "move"; }} onClick={() => openRow(r)}
       className={cx("flex min-h-6 w-full items-center gap-1.5 border-l-2 bg-surface-sunken px-1.5 text-left text-caption text-ink hover:bg-surface-hover", r.task.done ? "border-line text-ink-subtle line-through" : r.task.priority === "urgent" ? "border-danger" : r.task.priority === "high" ? "border-warning" : "border-action")}
-      aria-label={`${r.task.title}${scope ? "" : `, ${r.client.name}`}. Open`}>
-      <span className="truncate">{r.task.title}</span>
+      aria-label={`${titleOf(r.task)}${scope ? "" : `, ${r.client.name}`}. Open`}>
+      <span className="truncate">{titleOf(r.task)}</span>
     </button>
   );
   return (
@@ -366,7 +405,7 @@ function CalendarView({ rows, scope, openRow, onDrop }: { rows: Row[]; scope?: s
         {Array.from(new Set(inMonth.map((r) => r.task.due!))).map((day) => (
           <li key={day} className="grid gap-1 border-t-2 border-line-strong pt-2">
             <h3 className={cx("text-label-md", day === now ? "text-ink-brand" : "text-ink")}>{new Date(`${day}T12:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}</h3>
-            {byDay(day).map((r) => <button key={rowKey(r)} type="button" onClick={() => openRow(r)} className="flex min-h-11 items-center gap-2 text-left text-body-md text-ink"><StatusMark status={statusOf(r.task)} /><span className="min-w-0 flex-1">{r.task.title}</span><PriorityFlag priority={r.task.priority} /></button>)}
+            {byDay(day).map((r) => <button key={rowKey(r)} type="button" onClick={() => openRow(r)} className="flex min-h-11 items-center gap-2 text-left text-body-md text-ink"><StatusMark status={statusOf(r.task)} /><span className="min-w-0 flex-1">{titleOf(r.task)}</span><PriorityFlag priority={r.task.priority} /></button>)}
           </li>
         ))}
       </ol>
@@ -384,7 +423,7 @@ function CalendarView({ rows, scope, openRow, onDrop }: { rows: Row[]; scope?: s
       {undated.length > 0 && (
         <section aria-labelledby="undated-h" className="grid gap-1 border-t-2 border-line-strong pt-3">
           <h3 id="undated-h" className="text-label-md text-ink">No due date <span className="text-ink-subtle tabular-nums">{undated.length}</span></h3>
-          <ul className="flex flex-wrap gap-2">{undated.map((r) => <li key={rowKey(r)}><Badge tone="neutral" size="sm">{r.client.name}</Badge> <button type="button" onClick={() => openRow(r)} className="min-h-11 text-body-sm text-ink underline-offset-2 hover:underline sm:min-h-6">{r.task.title}</button></li>)}</ul>
+          <ul className="flex flex-wrap gap-2">{undated.map((r) => <li key={rowKey(r)}><Badge tone="neutral" size="sm">{r.client.name}</Badge> <button type="button" onClick={() => openRow(r)} className="min-h-11 text-body-sm text-ink underline-offset-2 hover:underline sm:min-h-6">{titleOf(r.task)}</button></li>)}</ul>
         </section>
       )}
     </div>
