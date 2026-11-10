@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
 import { shortDate, stages, uid, useClients } from "@/lib/clients";
+import { withStatus } from "@/lib/tasks";
 import { Wordmark } from "./Wordmark";
 
 /*
@@ -34,10 +35,10 @@ export function ClientPortal() {
 
   return (
     <div className="min-h-dvh bg-bg text-ink">
-      <header className="border-b border-line bg-surface">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <span className="flex items-center gap-3"><Wordmark /><span className="text-label-md text-ink">{c.name} · Project portal</span></span>
-          <Link href={`/?c=${c.id}`} className="inline-flex min-h-11 items-center gap-1.5 text-body-sm text-ink-muted hover:text-ink"><ArrowLeft className="size-4" aria-hidden="true" />Back to client management</Link>
+      <header className="border-b-2 border-line-strong bg-surface">
+        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4 sm:px-6">
+          <span className="flex min-w-0 items-center gap-3"><Wordmark compact /><span aria-hidden="true" className="h-5 w-px bg-line max-sm:hidden" /><span className="truncate text-label-md text-ink">{c.name}<span className="max-sm:hidden"> · Project portal</span></span></span>
+          <Link href={`/?c=${c.id}`} className="inline-flex min-h-11 shrink-0 items-center gap-1.5 text-label-md text-ink-muted hover:text-ink"><ArrowLeft className="size-4" aria-hidden="true" /><span>Back<span className="max-sm:sr-only"> to client management</span></span></Link>
         </div>
       </header>
       <main id="main" className="mx-auto grid max-w-5xl gap-8 px-4 py-8 sm:px-6 sm:py-10">
@@ -60,11 +61,11 @@ export function ClientPortal() {
           <section aria-labelledby="you-h" className="border-t-2 border-line-strong pt-4">
             <h2 id="you-h" className="flex items-center gap-2 font-display text-heading-lg text-ink"><Hourglass className="size-5 text-warning" aria-hidden="true" />Waiting on you</h2>
             {waiting.length === 0 ? <p className="mt-3 flex items-center gap-2 text-body-md text-ink-muted"><CircleCheck className="size-5 text-success" aria-hidden="true" />Nothing right now. Thank you!</p> : (
-              <ul className="mt-3 grid gap-1">
+              <ul className="mt-3 grid gap-2">
                 {waiting.map((t) => (
-                  <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-surface-sunken p-3">
-                    <span className="grid"><span className="text-body-md text-ink">{t.title}</span>{t.due && <span className="text-caption text-ink-subtle">Due {shortDate(t.due)}</span>}</span>
-                    <Button size="sm" variant="secondary" iconStart={<Check />} onClick={() => { update(c.id, (x) => ({ ...x, tasks: x.tasks.map((y) => (y.id === t.id ? { ...y, done: true } : y)) })); toast({ message: "Marked done. We'll take it from here.", tone: "success" }); }}>Mark done</Button>
+                  <li key={t.id} className="flex flex-col items-start gap-3 bg-surface-sunken p-4 sm:flex-row sm:items-center">
+                    <span className="grid min-w-0 flex-1"><span className="text-body-md text-ink">{t.title}</span>{t.due && <span className="text-caption text-ink-subtle">Due {shortDate(t.due)}</span>}</span>
+                    <Button size="sm" variant="secondary" className="shrink-0" iconStart={<Check />} onClick={() => { update(c.id, (x) => ({ ...x, tasks: x.tasks.map((y) => (y.id === t.id ? withStatus(y, "done") : y)) })); toast({ message: "Marked done. We'll take it from here.", tone: "success" }); }}>Mark done</Button>
                   </li>
                 ))}
               </ul>

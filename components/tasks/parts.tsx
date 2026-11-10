@@ -64,7 +64,7 @@ export function Assignee({ owner, task, onPick, compact = false }: { owner?: str
       trigger={
         <button type="button" aria-label={`${task}: assigned to ${who?.name ?? "nobody"}. Change`} className="inline-flex min-h-11 items-center gap-2 rounded-full py-1 pr-3 pl-1 text-label-sm text-ink-muted hover:bg-surface-hover hover:text-ink sm:min-h-8">
           {who ? <Avatar name={who.name} size="sm" /> : <span aria-hidden="true" className="grid size-6 place-items-center rounded-full border border-dashed border-line-strong"><UserRound className="size-3.5" /></span>}
-          <span className={cx(compact ? "sr-only" : "max-sm:sr-only")}>{who?.name ?? "Assign"}</span>
+          <span className={cx("whitespace-nowrap", compact ? "sr-only" : "max-sm:sr-only")}>{who?.name ?? "Assign"}</span>
         </button>
       } />
   );

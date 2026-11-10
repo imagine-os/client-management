@@ -1,6 +1,6 @@
 "use client";
 import { CommandPalette, Drawer, IconButton, Kbd, Menu, Modal, Popover, ThemeToggle, cx, useCommandShortcut, type Command } from "@ds/components";
-import { Bell, Building2, ListChecks, CalendarClock, ChevronsUpDown, CircleHelp, FolderPlus, LayoutTemplate, Moon, PanelLeft, PanelRight, Search, Users } from "lucide-react";
+import { ArrowLeft, Bell, Building2, ListChecks, CalendarClock, ChevronsUpDown, CircleHelp, FolderPlus, LayoutTemplate, Moon, PanelLeft, PanelRight, Search, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -208,11 +208,34 @@ function BuildStamp() {
 /** The places every page's left bar starts with. */
 export function MainNav({ active, clients, tasks }: { active?: "clients" | "tasks" | "templates"; clients?: number; tasks?: number }) {
   return (
-    <SideSection title="Client management">
+    <SideSection title="Workspace">
       <SideLink href="/" label="Clients" icon={<Users />} count={clients || undefined} active={active === "clients"} />
       <SideLink href="/tasks/" label="Tasks" icon={<ListChecks />} count={tasks || undefined} active={active === "tasks"} />
       <SideLink href="/templates/" label="Templates" icon={<LayoutTemplate />} active={active === "templates"} />
     </SideSection>
+  );
+}
+
+/**
+ * Every page's header, the same everywhere: an eyebrow that says something useful, the title, a short description,
+ * and the page's actions on the right (under it on phones). A back link, when there is one, sits above.
+ */
+export function PageHeader({ eyebrow, title, description, note, actions, back }: {
+  eyebrow?: React.ReactNode; title: React.ReactNode; description?: React.ReactNode; note?: React.ReactNode; actions?: React.ReactNode; back?: { href: string; label: string };
+}) {
+  return (
+    <header className="grid gap-3">
+      {back && <Link href={back.href} className="-ml-1 inline-flex min-h-11 w-fit items-center gap-1.5 px-1 text-label-md text-ink-muted hover:text-ink sm:min-h-8"><ArrowLeft className="size-4" aria-hidden="true" />{back.label}</Link>}
+      <div className="flex flex-wrap items-end justify-between gap-x-10 gap-y-5">
+        <div className="grid min-w-0 flex-1 basis-80 gap-1">
+          {eyebrow && <p className="text-eyebrow text-ink-brand uppercase">{eyebrow}</p>}
+          <h1 className="font-display text-display-md text-balance text-ink">{title}</h1>
+          {description && <p className="mt-1 max-w-2xl text-body-md text-ink-muted">{description}</p>}
+          {note}
+        </div>
+        {actions && <div className="flex shrink-0 flex-wrap items-end gap-2 max-sm:w-full">{actions}</div>}
+      </div>
+    </header>
   );
 }
 

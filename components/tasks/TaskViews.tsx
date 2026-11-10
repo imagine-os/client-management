@@ -1,5 +1,5 @@
 "use client";
-import { Badge, Button, Checkbox, Field, IconButton, Input, Menu, Popover, SegmentedControl, Select, Switch, Table, cx, type Column } from "@ds/components";
+import { Badge, Button, Checkbox, Drawer, Field, IconButton, Input, Menu, Popover, SegmentedControl, Select, Switch, Table, cx, type Column } from "@ds/components";
 import { ArrowDownUp, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Columns3, Filter, Layers, List, Plus, Search, Table2, X } from "lucide-react";
 import * as React from "react";
 import { uid, useClients, type Client, type ClientTask, type TaskPriority, type TaskStatus } from "@/lib/clients";
@@ -77,7 +77,7 @@ export function TaskViews({ clients, scope, storageKey, preset, defaultView = "l
 
   return (
     <div className="grid gap-4">
-      <Toolbar clients={clients} scope={scope} prefs={prefs} setPrefs={setPrefs} filters={filters} setFilters={setFilters} groupBy={groupBy} setGroup={(g) => { setGroup(undefined); setPrefs({ ...prefs, group: g }); }} />
+      <Toolbar clients={clients} scope={scope} prefs={prefs} setPrefs={setPrefs} filters={filters} setFilters={setFilters} groupBy={groupBy} setGroup={(g) => { setGroup(undefined); setPrefs({ ...prefs, group: g }); }} count={rows.length} />
       <p className="text-caption text-ink-subtle" aria-live="polite">{rows.length} of {total} tasks{!f.showDone ? " · done tasks hidden" : ""}</p>
 
       {prefs.view === "list" && <ListView groups={groups} grouped={groupBy !== "none"} scope={scope} label={label} edits={edits} openRow={openRow} clients={clients} defaultClient={defaultClient} create={create} />}
@@ -94,46 +94,61 @@ export function TaskViews({ clients, scope, storageKey, preset, defaultView = "l
 
 /* ---------- Toolbar: view, search, filter, group, sort, done ---------- */
 
-function Toolbar({ clients, scope, prefs, setPrefs, filters, setFilters, groupBy, setGroup }: {
-  clients: Client[]; scope?: string; prefs: Prefs; setPrefs: (p: Prefs) => void; filters: Filters; setFilters: (f: Filters) => void; groupBy: GroupBy; setGroup: (g: GroupBy) => void;
+function Toolbar({ clients, scope, prefs, setPrefs, filters, setFilters, groupBy, setGroup, count }: {
+  clients: Client[]; scope?: string; prefs: Prefs; setPrefs: (p: Prefs) => void; filters: Filters; setFilters: (f: Filters) => void; groupBy: GroupBy; setGroup: (g: GroupBy) => void; count: number;
 }) {
   const n = activeFilters(filters);
   const toggle = <K extends "statuses" | "priorities" | "owners" | "clients">(k: K, v: Filters[K][number]) =>
     setFilters({ ...filters, [k]: (filters[k] as string[]).includes(v as string) ? (filters[k] as string[]).filter((x) => x !== v) : [...filters[k], v] });
   const sortName = sortings.find((s) => s.id === prefs.sort.key)?.name;
   const tool = "inline-flex h-10 items-center gap-1.5 rounded-md border border-line bg-surface px-3 text-label-md text-ink hover:border-line-strong [&_svg]:size-4 [&_svg]:text-ink-subtle";
+  // Wider screens: a popover under the button. Phones: the same panel in a side sheet, which has room to scroll.
+  const [sheet, setSheet] = React.useState(false);
+  const filterPanel = (
+    <>
+          <div className="grid gap-x-8 gap-y-6 sm:grid-cols-2">
+            <div className="grid content-start gap-6">
+              <fieldset className="grid content-start gap-0.5"><legend className="pb-2 text-eyebrow text-ink-subtle uppercase">Status</legend>
+                {statuses.map((s) => <Checkbox key={s.id} id={`f-${scope ?? "all"}-s-${s.id}`} label={s.name} checked={filters.statuses.includes(s.id)} onChange={() => toggle("statuses", s.id)} />)}
+              </fieldset>
+              <fieldset className="grid content-start gap-0.5"><legend className="pb-2 text-eyebrow text-ink-subtle uppercase">Priority</legend>
+                {[...priorities.map((p) => ({ id: p.id as TaskPriority | "none", name: p.name })), { id: "none" as const, name: "No priority" }].map((p) => <Checkbox key={p.id} id={`f-${scope ?? "all"}-p-${p.id}`} label={p.name} checked={filters.priorities.includes(p.id)} onChange={() => toggle("priorities", p.id)} />)}
+              </fieldset>
+            </div>
+            <div className="grid content-start gap-6">
+              <fieldset className="grid content-start gap-0.5"><legend className="pb-2 text-eyebrow text-ink-subtle uppercase">Assignee</legend>
+                {people.map((p) => <Checkbox key={p.id} id={`f-${scope ?? "all"}-o-${p.id}`} label={p.name} checked={filters.owners.includes(p.id)} onChange={() => toggle("owners", p.id)} />)}
+              </fieldset>
+              {!scope && (
+                <fieldset className="grid content-start gap-0.5"><legend className="pb-2 text-eyebrow text-ink-subtle uppercase">Client</legend>
+                  {clients.map((c) => <Checkbox key={c.id} id={`f-all-c-${c.id}`} label={c.name} checked={filters.clients.includes(c.id)} onChange={() => toggle("clients", c.id)} />)}
+                </fieldset>
+              )}
+            </div>
+            <div className="sm:col-span-2 sm:w-56">
+              <Field label="Due"><Select value={filters.due} onValueChange={(v) => setFilters({ ...filters, due: v as Filters["due"] })} options={[{ value: "any", label: "Any time" }, { value: "overdue", label: "Overdue" }, { value: "week", label: "Next 7 days" }, { value: "none", label: "No due date" }]} /></Field>
+            </div>
+          </div>
+          {n > 0 && <div className="mt-4 border-t border-line pt-3"><Button size="sm" variant="ghost" iconStart={<X />} onClick={() => setFilters({ ...noFilters, q: filters.q })}>Clear filters</Button></div>}
+    </>
+  );
   return (
     <div className="grid gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <SegmentedControl label="View" size="sm" value={prefs.view} onChange={(v) => setPrefs({ ...prefs, view: v as ViewId })} options={views} />
-        <div className="relative min-w-0 flex-1 sm:max-w-xs">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="max-w-full overflow-x-auto"><SegmentedControl label="View" size="sm" value={prefs.view} onChange={(v) => setPrefs({ ...prefs, view: v as ViewId })} options={views} /></div>
+        <div className="relative w-full sm:ml-auto sm:w-72">
           <Search aria-hidden="true" className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink-subtle" />
           <Input id={`${scope ?? "all"}-task-search`} type="search" aria-label="Search tasks" value={filters.q} onChange={(e) => setFilters({ ...filters, q: e.target.value })} placeholder="Search tasks" className="pl-9" />
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <Popover align="start" width="lg" label="Filter tasks" trigger={<button type="button" className={cx(tool, n > 0 && "border-action")} aria-label={n ? `Filter, ${n} on` : "Filter"}><Filter />Filter{n > 0 && <span className="tabular-nums text-ink-brand">{n}</span>}</button>}>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <fieldset className="grid gap-1"><legend className="pb-1 text-label-sm text-ink-muted">Status</legend>
-              {statuses.map((s) => <Checkbox key={s.id} id={`f-${scope ?? "all"}-s-${s.id}`} label={s.name} checked={filters.statuses.includes(s.id)} onChange={() => toggle("statuses", s.id)} />)}
-            </fieldset>
-            <fieldset className="grid gap-1"><legend className="pb-1 text-label-sm text-ink-muted">Priority</legend>
-              {[...priorities.map((p) => ({ id: p.id as TaskPriority | "none", name: p.name })), { id: "none" as const, name: "No priority" }].map((p) => <Checkbox key={p.id} id={`f-${scope ?? "all"}-p-${p.id}`} label={p.name} checked={filters.priorities.includes(p.id)} onChange={() => toggle("priorities", p.id)} />)}
-            </fieldset>
-            <fieldset className="grid gap-1"><legend className="pb-1 text-label-sm text-ink-muted">Assignee</legend>
-              {people.map((p) => <Checkbox key={p.id} id={`f-${scope ?? "all"}-o-${p.id}`} label={p.name} checked={filters.owners.includes(p.id)} onChange={() => toggle("owners", p.id)} />)}
-            </fieldset>
-            <div className="grid content-start gap-4">
-              <Field label="Due"><Select value={filters.due} onValueChange={(v) => setFilters({ ...filters, due: v as Filters["due"] })} options={[{ value: "any", label: "Any time" }, { value: "overdue", label: "Overdue" }, { value: "week", label: "Due in the next 7 days" }, { value: "none", label: "No due date" }]} /></Field>
-              {!scope && (
-                <fieldset className="grid gap-1"><legend className="pb-1 text-label-sm text-ink-muted">Client</legend>
-                  {clients.map((c) => <Checkbox key={c.id} id={`f-all-c-${c.id}`} label={c.name} checked={filters.clients.includes(c.id)} onChange={() => toggle("clients", c.id)} />)}
-                </fieldset>
-              )}
-            </div>
-          </div>
-          {n > 0 && <div className="mt-4 border-t border-line pt-3"><Button size="sm" variant="ghost" iconStart={<X />} onClick={() => setFilters({ ...noFilters, q: filters.q })}>Clear filters</Button></div>}
-        </Popover>
+        <span className="max-sm:hidden">
+          <Popover align="start" width="lg" label="Filter tasks" trigger={<button type="button" className={cx(tool, n > 0 && "border-action")} aria-label={n ? `Filter, ${n} on` : "Filter"}><Filter />Filter{n > 0 && <span className="tabular-nums text-ink-brand">{n}</span>}</button>}>
+            {filterPanel}
+          </Popover>
+        </span>
+        <button type="button" className={cx(tool, "sm:hidden", n > 0 && "border-action")} aria-label={n ? `Filter, ${n} on` : "Filter"} onClick={() => setSheet(true)}><Filter />Filter{n > 0 && <span className="tabular-nums text-ink-brand">{n}</span>}</button>
+        <Drawer side="right" size="md" open={sheet} onClose={() => setSheet(false)} title="Filter tasks" footer={<Button variant="secondary" onClick={() => setSheet(false)}>Show {count} tasks</Button>}>{filterPanel}</Drawer>
         {prefs.view !== "calendar" && (
           <Menu align="start" header={<span className="text-caption text-ink-subtle">Group by</span>} items={groupings.filter((g) => !(scope && g.id === "client")).map((g) => ({ label: g.name, checked: groupBy === g.id, onSelect: () => setGroup(g.id) }))}
             trigger={<button type="button" className={tool}><Layers />Group: {groupings.find((g) => g.id === groupBy)?.name}<ChevronDown /></button>} />
@@ -193,16 +208,22 @@ function ListView({ groups, grouped, scope, label, edits, openRow, clients, defa
                 {g.rows.length > 0 && (
                   <ul className="divide-y divide-line">
                     {g.rows.map((r) => (
-                      <li key={rowKey(r)} className="row-lift flex flex-wrap items-center gap-x-2 gap-y-0.5 py-1 pr-1">
+                      <li key={rowKey(r)} className="row-lift flex items-start gap-2 py-1 pr-1 sm:items-center">
                         <StatusMenu task={r.task} label={label(r)} compact onPick={(s) => edits.status(r, s)} />
-                        <button type="button" onClick={() => openRow(r)} className="min-h-11 min-w-0 flex-1 text-left text-body-md text-ink hover:underline sm:min-h-8">
-                          <span className={cx(r.task.done && "text-ink-subtle line-through")}>{r.task.title}</span>
-                        </button>
-                        {!scope && <span className="w-36 truncate text-caption text-ink-subtle max-lg:hidden">{r.client.name}</span>}
-                        <SubtaskCount task={r.task} />
-                        <PriorityMenu task={r.task} label={label(r)} compact onPick={(p) => edits.priority(r, p)} />
-                        <span className="w-28 text-right"><DueLabel task={r.task} /></span>
-                        <Assignee owner={r.task.owner} task={label(r)} compact onPick={(o) => edits.owner(r, o)} />
+                        {/* Phones: the meta drops to a second line under the title, so the title keeps the full width. */}
+                        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2">
+                          <button type="button" onClick={() => openRow(r)} className="min-h-11 min-w-0 flex-1 basis-full text-left text-body-md text-ink hover:underline sm:min-h-8 sm:basis-0">
+                            <span className={cx(r.task.done && "text-ink-subtle line-through")}>{r.task.title}</span>
+                          </button>
+                          <div className="flex items-center gap-1 max-sm:-mt-2 max-sm:w-full">
+                            {!scope && <span className="w-36 truncate text-caption text-ink-subtle max-lg:hidden">{r.client.name}</span>}
+                            {!scope && <span className="mr-1 min-w-0 truncate text-caption text-ink-subtle lg:hidden">{r.client.name}</span>}
+                            <SubtaskCount task={r.task} />
+                            <PriorityMenu task={r.task} label={label(r)} compact onPick={(p) => edits.priority(r, p)} />
+                            <span className="sm:w-28 sm:text-right"><DueLabel task={r.task} /></span>
+                            <span className="max-sm:ml-auto"><Assignee owner={r.task.owner} task={label(r)} compact onPick={(o) => edits.owner(r, o)} /></span>
+                          </div>
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -297,7 +318,7 @@ function TableView({ rows, scope, sort, setSort, label, edits, openRow }: ViewPr
     { key: "status", header: "Status", sortable: true, cell: (r) => <StatusMenu task={r.task} label={label(r)} onPick={(s) => edits.status(r, s)} /> },
     { key: "priority", header: "Priority", sortable: true, cell: (r) => <PriorityMenu task={r.task} label={label(r)} onPick={(p) => edits.priority(r, p)} /> },
     { key: "owner", header: "Assignee", sortable: true, cell: (r) => <Assignee owner={r.task.owner} task={label(r)} onPick={(o) => edits.owner(r, o)} /> },
-    { key: "due", header: "Due", sortable: true, cell: (r) => <Input type="date" aria-label={`Due date for ${r.task.title}`} value={r.task.due ?? ""} className="w-40" onChange={(e) => edits.due(r, e.target.value || undefined)} /> },
+    { key: "due", header: "Due", sortable: true, cell: (r) => <Input type="date" size="sm" aria-label={`Due date for ${r.task.title}`} value={r.task.due ?? ""} className="w-36 max-sm:h-11" onChange={(e) => edits.due(r, e.target.value || undefined)} /> },
     { key: "subtasks", header: "Subtasks", cell: (r) => <SubtaskCount task={r.task} /> },
   ];
   return (
@@ -350,7 +371,7 @@ function CalendarView({ rows, scope, openRow, onDrop }: { rows: Row[]; scope?: s
         ))}
       </ol>
       <div className="max-sm:hidden">
-        <div className="grid grid-cols-7 border-b-2 border-line-strong">{weekdays.map((w) => <span key={w} className="px-2 pb-1 text-label-sm text-ink-muted">{w}</span>)}</div>
+        <div className="grid grid-cols-7 border-b-2 border-line-strong">{weekdays.map((w) => <span key={w} className="px-1.5 pb-1 text-label-sm text-ink-muted">{w}</span>)}</div>
         <div className="grid grid-cols-7">
           {days.slice(0, weeks * 7).map((d) => {
             const iso = isoDay(d);

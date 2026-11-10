@@ -6,7 +6,7 @@ import * as React from "react";
 import { uid, useClients, type TaskPriority, type TaskStatus } from "@/lib/clients";
 import { scoped, useTeam } from "@/lib/team";
 import { applyFilters, noFilters, people, presets, priorities, rowsOf, statuses, withStatus } from "@/lib/tasks";
-import { MainNav, Shell, SideLink, SideSection } from "./Shell";
+import { MainNav, PageHeader, Shell, SideLink, SideSection } from "./Shell";
 import { TaskViews } from "./tasks/TaskViews";
 
 /*
@@ -42,14 +42,9 @@ export function TasksPage() {
   return (
     <Shell sidebar={sidebar} sidebarTitle="Tasks" commands={commands} status={<><span>{open} open tasks across {clients.length} clients</span><span className="max-sm:hidden">Kept in this browser</span></>}>
       <div className="grid gap-6">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div className="grid gap-1">
-            <p className="text-eyebrow text-ink-brand uppercase">{saved.id === "open" ? "Every client" : "Saved view"}</p>
-            <h1 className="font-display text-display-md text-ink">{saved.id === "open" ? "Tasks" : saved.name}</h1>
-            <p className="max-w-2xl text-body-md text-ink-muted">Everything we and our clients have to do. Switch views, filter and group; open a task for its details and subtasks.</p>
-          </div>
-          <Button variant="primary" iconStart={<Plus />} onClick={() => setCreating(true)}>New task</Button>
-        </div>
+        <PageHeader eyebrow={saved.id === "open" ? `${open} open across ${clients.length} clients` : "Saved view"} title={saved.id === "open" ? "Tasks" : saved.name}
+          description="Everything we and our clients have to do. Switch views, filter and group; open a task for its details and subtasks."
+          actions={<Button variant="primary" iconStart={<Plus />} onClick={() => setCreating(true)}>New task</Button>} />
         {!ready ? <div aria-busy="true" aria-label="Loading tasks" className="grid gap-3"><Skeleton className="h-10 w-1/2" /><Skeleton shape="block" className="h-80" /></div>
           : <TaskViews key={saved.id} clients={clients} storageKey="cm-tasks" preset={preset} />}
       </div>

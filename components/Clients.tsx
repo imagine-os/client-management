@@ -1,13 +1,13 @@
 "use client";
 import { Badge, Button, Field, IconButton, Input, Menu, Modal, RadioGroup, SegmentedControl, Select, Skeleton, Tab, TabList, TabPanel, Tabs, Table, Textarea, cx, useToast, type Column } from "@ds/components";
-import { ArrowLeft, ArrowRight, ArrowUpRight, Briefcase, CalendarClock, Check, Columns3, ExternalLink, FileText, FolderPlus, GripVertical, LayoutGrid, List, ListTodo, MessageSquare, MonitorSmartphone, MoreHorizontal, Plus, RotateCcw, Table2, Users } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Briefcase, CalendarClock, Check, Columns3, ExternalLink, FileText, FolderPlus, GripVertical, LayoutGrid, List, ListTodo, MessageSquare, MonitorSmartphone, MoreHorizontal, Plus, RotateCcw, Table2, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 import { shortDate, stageTone, stages, uid, useClients, type Client, type ClientStage } from "@/lib/clients";
 import { scoped, useTeam } from "@/lib/team";
 import { progressOf, projectTypes, templateFor, type LocalProject, type ProjectType } from "@/lib/template";
-import { MainNav, Shell, SideLink, SideSection } from "./Shell";
+import { MainNav, PageHeader, Shell, SideLink, SideSection } from "./Shell";
 import { Tick } from "./tasks/parts";
 import { TaskViews } from "./tasks/TaskViews";
 
@@ -42,7 +42,7 @@ export function Clients() {
       <MainNav active={client ? undefined : "clients"} clients={clients.length} tasks={clients.reduce((n, c) => n + c.tasks.filter((t) => !t.done).length, 0)} />
       <SideSection title="Clients">
         {clients.map((c) => <SideLink key={c.id} href={`/?c=${c.id}`} label={c.name} icon={<Monogram name={c.name} />} active={client?.id === c.id}
-          trailing={c.sample ? <span className="text-caption text-ink-subtle">Sample</span> : undefined} />)}
+ />)}
       </SideSection>
     </>
   );
@@ -60,18 +60,10 @@ export function Clients() {
         <ClientPage key={client.id} client={client} update={update} onNewProject={() => setNewProject(true)} />
       ) : (
         <>
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div className="grid gap-1">
-              <p className="text-eyebrow text-ink-brand uppercase">Client management</p>
-              <h1 className="font-display text-display-md text-ink">Clients</h1>
-              <p className="max-w-2xl text-body-md text-ink-muted">Every client and where things stand: stage, next step, open tasks and the next milestone. Drag a card to change its stage; open one for its projects and notes.</p>
-              {team.id !== "studio" && <p className="text-caption text-ink-subtle">Showing {team.name} only. Switch team from the top bar.</p>}
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button variant="secondary" iconStart={<Plus />} onClick={() => setNewClient(true)}>Add client</Button>
-              <Button variant="primary" iconStart={<FolderPlus />} onClick={() => setNewProject(true)}>New project</Button>
-            </div>
-          </div>
+          <PageHeader eyebrow={`${clients.length} ${clients.length === 1 ? "client" : "clients"} · ${openTasks} open tasks`} title="Clients"
+            description="Where every client stands and what's next. Drag a card to change its stage; open one for its projects, tasks and notes."
+            note={team.id !== "studio" ? <p className="text-caption text-ink-subtle">Showing {team.name} only. Switch team from the top bar.</p> : undefined}
+            actions={<><Button variant="secondary" iconStart={<Plus />} onClick={() => setNewClient(true)}>Add client</Button><Button variant="primary" iconStart={<FolderPlus />} onClick={() => setNewProject(true)}>New project</Button></>} />
           <div className="mt-6 flex flex-wrap items-center justify-between gap-2">
             <SegmentedControl label="View" size="sm" value={view} onChange={(v) => { setView(v as ClientView); try { localStorage.setItem(VIEW_KEY, v); } catch { /* ignore */ } }}
               options={[{ value: "board", label: "Board", icon: <Columns3 /> }, { value: "list", label: "List", icon: <List /> }, { value: "grid", label: "Grid", icon: <LayoutGrid /> }, { value: "table", label: "Table", icon: <Table2 /> }]} />
@@ -104,24 +96,32 @@ function Monogram({ name }: { name: string }) {
 const nextMilestone = (c: Client) => c.milestones.filter((m) => !m.done).sort((a, b) => a.date.localeCompare(b.date))[0];
 
 function Board({ clients, update }: { clients: Client[]; update: (id: string, fn: (c: Client) => Client) => void }) {
+  // Columns keep a readable width and scroll sideways, whatever the side bars leave. A fade on the right edge says
+  // there are more stages until you reach the last one.
+  const ref = React.useRef<HTMLDivElement>(null);
+  const [more, setMore] = React.useState(false);
+  const measure = React.useCallback(() => { const el = ref.current; if (el) setMore(el.scrollLeft + el.clientWidth < el.scrollWidth - 4); }, []);
+  React.useEffect(() => { measure(); window.addEventListener("resize", measure); return () => window.removeEventListener("resize", measure); }, [measure]);
   return (
-    <div className="mt-5 -mx-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
-      {/* Columns keep a readable width and scroll sideways, whatever the side bars leave. */}
-      <ol className="flex gap-4">
+    <div className="relative mt-5">
+    <div ref={ref} onScroll={measure} className="-mx-4 snap-x scroll-px-4 overflow-x-auto px-4 pb-3 sm:mx-0 sm:scroll-px-0 sm:px-0">
+      <ol className="flex gap-3">
         {stages.map((s) => {
           const here = clients.filter((c) => c.stage === s.id);
           return (
             <Column key={s.id} name={s.name} onDrop={(id) => { const c = clients.find((x) => x.id === id); if (c && c.stage !== s.id) update(id, (x) => ({ ...x, stage: s.id })); }}>
-              <div className="flex items-baseline justify-between gap-2 px-1">
+              <div className="flex items-baseline justify-between gap-2 px-3">
                 <h2 className="text-label-md text-ink">{s.name} <span className="text-ink-subtle tabular-nums">{here.length}</span></h2>
                 <span className="text-caption text-ink-subtle">{s.sub}</span>
               </div>
-              {here.length === 0 && <p className="border-t border-dashed border-line-dashed px-1 pt-3 text-body-sm text-ink-subtle">No clients here</p>}
+              {here.length === 0 && <p className="border-t border-dashed border-line-dashed px-3 pt-3 text-body-sm text-ink-subtle">No clients here</p>}
               {here.map((c) => <ClientCard key={c.id} c={c} update={update} />)}
             </Column>
           );
         })}
       </ol>
+    </div>
+      {more && <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-linear-to-l from-bg to-transparent max-sm:-right-4" />}
     </div>
   );
 }
@@ -130,7 +130,7 @@ function Board({ clients, update }: { clients: Client[]; update: (id: string, fn
 function Column({ name, onDrop, children }: { name: string; onDrop: (id: string) => void; children: React.ReactNode }) {
   const [over, setOver] = React.useState(false);
   return (
-    <li data-stage={name} className={cx("flex w-64 shrink-0 flex-col gap-2 border-t-4 border-line-strong pt-3 transition-colors duration-fast", over && "bg-surface-selected")}
+    <li data-stage={name} className={cx("flex w-60 shrink-0 snap-start flex-col gap-2 border-t-4 border-line-strong pt-3 transition-colors duration-fast", over && "bg-surface-selected")}
       onDragOver={(e) => { if (e.dataTransfer.types.includes(DRAG)) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setOver(true); } }}
       onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setOver(false); }}
       onDrop={(e) => { e.preventDefault(); setOver(false); const id = e.dataTransfer.getData(DRAG); if (id) onDrop(id); }}>
@@ -183,7 +183,7 @@ function ClientGrid({ clients }: { clients: Client[] }) {
             <p className="text-body-sm text-ink-muted">{c.nextStep}</p>
             <div className="flex items-center gap-3">
               <span className="h-1.5 flex-1 overflow-hidden bg-surface-sunken"><span className="block h-full bg-ink" style={{ width: `${pct}%` }} /></span>
-              <span className="text-caption text-ink-subtle tabular-nums">{done}/{c.milestones.length} milestones</span>
+              <span className="w-28 text-right text-caption text-ink-subtle tabular-nums">{c.milestones.length ? `${done} of ${c.milestones.length} milestones` : "No milestones"}</span>
             </div>
             <p className="flex flex-wrap gap-x-3 text-caption text-ink-subtle"><span>{c.tasks.filter((t) => !t.done).length} open tasks</span>{m && <span>Next: {shortDate(m.date)}</span>}</p>
           </li>
@@ -200,11 +200,10 @@ function ClientTable({ clients }: { clients: Client[] }) {
   const val = (c: Client): string | number => sort.key === "name" ? c.name.toLowerCase() : sort.key === "stage" ? stages.findIndex((s) => s.id === c.stage) : sort.key === "open" ? c.tasks.filter((t) => !t.done).length : sort.key === "next" ? nextMilestone(c)?.date ?? "9999" : c.started;
   const rows = [...clients].sort((a, b) => { const x = val(a), y = val(b); return (x < y ? -1 : x > y ? 1 : 0) * (sort.direction === "asc" ? 1 : -1); });
   const columns: Column<Client>[] = [
-    { key: "name", header: "Client", sortable: true, cell: (c) => <Link href={`/?c=${c.id}`} className="inline-flex min-h-11 items-center text-label-md text-ink underline-offset-4 hover:underline sm:min-h-8">{c.name}</Link> },
+    { key: "name", header: "Client", sortable: true, cell: (c) => <span className="grid py-1"><Link href={`/?c=${c.id}`} className="inline-flex min-h-11 items-center text-label-md whitespace-nowrap text-ink underline-offset-4 hover:underline sm:min-h-6">{c.name}</Link><span className="text-caption whitespace-nowrap text-ink-subtle">{c.industry.split("·")[0].trim()}{c.sample ? " · Sample" : ""}</span></span> },
     { key: "stage", header: "Stage", sortable: true, cell: (c) => <Badge tone={stageTone[c.stage]} size="sm">{stages.find((s) => s.id === c.stage)?.name}</Badge> },
-    { key: "industry", header: "What they do", cell: (c) => <span className="text-body-sm whitespace-nowrap text-ink-muted">{c.industry}</span> },
-    { key: "open", header: "Open tasks", sortable: true, numeric: true, cell: (c) => c.tasks.filter((t) => !t.done).length },
-    { key: "next", header: "Next milestone", sortable: true, cell: (c) => { const m = nextMilestone(c); return <span className="text-body-sm whitespace-nowrap text-ink-muted">{m ? `${shortDate(m.date)} · ${m.title}` : "None set"}</span>; } },
+    { key: "open", header: "Open", sortable: true, numeric: true, cell: (c) => c.tasks.filter((t) => !t.done).length },
+    { key: "next", header: "Next milestone", sortable: true, cell: (c) => { const m = nextMilestone(c); return <span className="block max-w-72 truncate text-body-sm text-ink-muted" title={m?.title}>{m ? `${shortDate(m.date)} · ${m.title}` : "None set"}</span>; } },
     { key: "started", header: "Since", sortable: true, cell: (c) => <span className="text-body-sm whitespace-nowrap text-ink-muted">{shortDate(c.started)}</span> },
   ];
   return <Table className="mt-5" caption="Clients" columns={columns} rows={rows} rowKey={(c) => c.id} sort={sort} onSortChange={(s) => setSort({ key: s.key as ClientSortKey, direction: s.direction })} />;
@@ -212,18 +211,18 @@ function ClientTable({ clients }: { clients: Client[] }) {
 
 function ClientList({ clients }: { clients: Client[] }) {
   return (
-    <ul className="mt-5 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
+    <ul className="mt-5 divide-y divide-line border-y-2 border-line-strong">
       {clients.map((c) => {
         const m = nextMilestone(c);
         return (
-          <li key={c.id} className="row-lift flex flex-wrap items-center gap-x-4 gap-y-1 p-4">
+          <li key={c.id} className="row-lift flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-3">
             <div className="min-w-0 flex-1">
               <h2 className="text-label-md text-ink"><Link href={`/?c=${c.id}`} className="inline-flex min-h-11 items-center rounded-xs underline-offset-4 outline-none hover:underline focus-visible:outline-2 focus-visible:outline-focus sm:min-h-6">{c.name}</Link>{c.sample && <span className="ml-2 text-caption text-ink-subtle">Sample</span>}</h2>
               <p className="truncate text-body-sm text-ink-muted">{c.nextStep}</p>
             </div>
-            <Badge tone={stageTone[c.stage]} size="sm">{stages.find((s) => s.id === c.stage)?.name}</Badge>
-            <span className="w-24 text-caption text-ink-subtle tabular-nums max-md:hidden">{c.tasks.filter((t) => !t.done).length} open</span>
-            <span className="w-32 text-caption text-ink-subtle max-md:hidden">{m ? `${m.title.slice(0, 18)}${m.title.length > 18 ? "…" : ""} · ${shortDate(m.date)}` : "No milestone"}</span>
+            <span className="w-24"><Badge tone={stageTone[c.stage]} size="sm">{stages.find((s) => s.id === c.stage)?.name}</Badge></span>
+            <span className="w-16 text-caption text-ink-subtle tabular-nums max-md:hidden">{c.tasks.filter((t) => !t.done).length} open</span>
+            <span className="w-52 truncate text-caption text-ink-subtle max-lg:hidden" title={m?.title}>{m ? `${shortDate(m.date)} · ${m.title}` : "No milestone"}</span>
           </li>
         );
       })}
@@ -242,24 +241,15 @@ function ClientPage({ client: c, update, onNewProject }: { client: Client; updat
   const open = c.tasks.filter((t) => !t.done);
   return (
     <div className="grid gap-6">
-      <div className="grid gap-3">
-        <Link href="/" className="inline-flex min-h-11 w-fit items-center gap-1.5 text-body-sm text-ink-muted hover:text-ink sm:min-h-8"><ArrowLeft className="size-4" aria-hidden="true" />All clients</Link>
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="grid gap-1">
-            <p className="text-eyebrow text-ink-brand uppercase">{c.industry.split("·")[0].trim()}</p>
-            <h1 className="font-display text-display-md text-ink">{c.name}</h1>
-            <p className="max-w-2xl text-body-md text-ink-muted">{c.summary}</p>
-            {c.sample && <p className="text-caption text-ink-subtle">A fictional sample client.</p>}
-          </div>
-          <div className="flex flex-wrap items-end gap-2">
-            <Field label="Stage"><Select value={c.stage} onChange={(e) => set((x) => ({ ...x, stage: e.target.value as ClientStage }))} className="w-40" options={stages.map((s) => ({ value: s.id, label: s.name }))} /></Field>
-            <Link href={`/portal/?c=${c.id}`} className="inline-flex h-10 items-center gap-2 rounded-md border border-line-strong px-3 text-label-md text-ink hover:bg-surface-hover"><MonitorSmartphone className="size-4" aria-hidden="true" />Client portal</Link>
-            <Button variant="primary" iconStart={<FolderPlus />} onClick={onNewProject}>New project</Button>
-          </div>
-        </div>
-      </div>
+      <PageHeader back={{ href: "/", label: "All clients" }} eyebrow={c.industry.split("·")[0].trim()} title={c.name} description={c.summary}
+        note={c.sample ? <p className="text-caption text-ink-subtle">A fictional sample client.</p> : undefined}
+        actions={<>
+          <Field label="Stage"><Select value={c.stage} onChange={(e) => set((x) => ({ ...x, stage: e.target.value as ClientStage }))} className="w-40" options={stages.map((s) => ({ value: s.id, label: s.name }))} /></Field>
+          <Link href={`/portal/?c=${c.id}`} className="inline-flex h-10 items-center gap-2 border border-line-strong px-3 text-label-md text-ink hover:bg-surface-hover"><MonitorSmartphone className="size-4" aria-hidden="true" />Client portal</Link>
+          <Button variant="primary" iconStart={<FolderPlus />} onClick={onNewProject}>New project</Button>
+        </>} />
 
-      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-surface-selected p-4">
+      <div className="flex flex-wrap items-center gap-3 border-l-4 border-action bg-surface-selected px-4 py-3">
         <ArrowRight className="size-5 shrink-0 text-ink-brand" aria-hidden="true" />
         <p className="min-w-0 flex-1 text-body-md text-ink"><b className="text-label-md">Next step</b> · {c.nextStep}</p>
       </div>
@@ -297,12 +287,12 @@ function ClientPage({ client: c, update, onNewProject }: { client: Client; updat
           <div className="grid content-start gap-6">
             <section aria-labelledby="who-h" className="border-t-2 border-line-strong pt-4">
               <h2 id="who-h" className="font-display text-heading-lg text-ink">People</h2>
-              <ul className="mt-3 grid gap-2">{c.contacts.map((p) => <li key={p.name} className="flex items-center gap-3"><Monogram name={p.name} /><span className="text-body-md text-ink">{p.name}</span><span className="text-body-sm text-ink-subtle">{p.role}</span></li>)}</ul>
+              <ul className="mt-3 grid gap-1">{c.contacts.map((p) => <li key={p.name} className="flex min-h-8 items-center gap-3"><Monogram name={p.name} /><span className="text-body-md text-ink">{p.name}</span><span className="text-body-sm text-ink-subtle">{p.role}</span></li>)}</ul>
             </section>
             {c.links.length > 0 && (
               <section aria-labelledby="links-h" className="border-t-2 border-line-strong pt-4">
                 <h2 id="links-h" className="font-display text-heading-lg text-ink">Links</h2>
-                <ul className="mt-2 grid">{c.links.map((l) => <li key={l.href}><a href={l.href} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center gap-2 text-body-md text-link underline-offset-2 hover:underline">{l.label}<ExternalLink className="size-3.5" aria-hidden="true" /></a></li>)}</ul>
+                <ul className="mt-3 grid gap-1">{c.links.map((l) => <li key={l.href}><a href={l.href} target="_blank" rel="noreferrer" className="inline-flex min-h-11 sm:min-h-8 items-center gap-2 text-body-md text-link underline-offset-2 hover:underline">{l.label}<ExternalLink className="size-3.5" aria-hidden="true" /></a></li>)}</ul>
               </section>
             )}
           </div>
@@ -409,7 +399,7 @@ function ClientFacts({ client: c }: { client: Client }) {
   const done = c.tasks.filter((t) => t.done).length;
   return (
     <div className="grid">
-      <section className="grid gap-3 p-5">
+      <section className="grid gap-3 px-5 pt-6 pb-5">
         <p className="text-eyebrow text-ink-brand uppercase">Client</p>
         <h2 className="font-display text-heading-lg text-ink">{c.name}</h2>
         <dl className="grid gap-3 text-body-sm">
@@ -427,7 +417,7 @@ function ClientFacts({ client: c }: { client: Client }) {
 function Week({ clients }: { clients: Client[] }) {
   const due = clients.flatMap((c) => c.tasks.filter((t) => !t.done && t.due).map((t) => ({ c, t }))).sort((a, b) => (a.t.due ?? "").localeCompare(b.t.due ?? "")).slice(0, 8);
   return (
-    <section className="grid gap-3 p-5">
+    <section className="grid gap-3 px-5 pt-6 pb-5">
       <p className="text-eyebrow text-ink-brand uppercase">Coming up</p>
       <h2 className="font-display text-heading-lg text-ink">Due next</h2>
       {due.length === 0 ? <p className="text-body-sm text-ink-muted">Nothing due.</p> : (

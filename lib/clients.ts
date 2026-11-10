@@ -58,12 +58,19 @@ export interface Client {
   notes: ClientNote[];
 }
 
+/*
+ * Sample dates are relative to today, so the sample always reads like a live week: due soon, a few things late,
+ * the next milestone ahead. day(2) is the day after tomorrow; stamp(-1, "15:00") is yesterday at 3pm.
+ */
+const day = (n: number) => { const d = new Date(); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+const stamp = (n: number, hhmm: string) => { const d = new Date(`${day(n)}T${hhmm}:00`); return d.toISOString(); };
+
 /** Where the Between Gigs workspace is published; its projects open there. */
 const BG = "https://between-gigs.github.io/between-gig-2.0/workspace";
 
 const seed: Client[] = [
   {
-    id: "between-gigs", name: "Between Gigs", stage: "active", industry: "Marketplace · entertainment talent", started: "2026-09-15",
+    id: "between-gigs", name: "Between Gigs", stage: "active", industry: "Marketplace · entertainment talent", started: day(-43),
     summary: "A marketplace where entertainment professionals offer their skills between productions. We're building 2.0: the Gigster journey, the owner tools, Studio and the workspace.",
     nextStep: "Review the new onboarding (Edit on your profile) and pick a Figma team for image generation.",
     contacts: [{ name: "Client team", role: "Product owners" }, { name: "Anu", role: "Backend" }, { name: "JAM Studio", role: "Design and front end" }],
@@ -88,55 +95,56 @@ const seed: Client[] = [
       { label: "Backend handoff", href: "https://between-gigs.github.io/between-gig-2.0/artifacts/backend-handoff/" },
     ],
     tasks: [
-      { id: "t1", title: "Edit on your profile: client review of the new default onboarding", done: false, status: "review", priority: "urgent", due: "2026-10-30", owner: "Client", description: "Open the profile canvas as Ava (blank), Elena (part-filled) and Hana (changes requested), and leave notes on anything that feels off." },
-      { id: "t2", title: "Choose the Figma team for generated imagery", done: false, status: "todo", priority: "high", due: "2026-10-30", owner: "Client" },
-      { id: "t3", title: "Worker API and D1 tables (DataSource → api.ts)", done: false, status: "doing", priority: "high", due: "2026-11-14", owner: "Anu", subtasks: [{ id: "s1", title: "Tables and migrations", done: true }, { id: "s2", title: "Invite and sign-up endpoints", done: false }, { id: "s3", title: "Swap the sample DataSource", done: false }] },
-      { id: "t4", title: "Clerk production instance and DNS", done: false, status: "todo", priority: "normal", due: "2026-11-07", owner: "Client" },
-      { id: "t5", title: "Owner tools and Studio on the workspace shell", done: false, status: "doing", priority: "normal", due: "2026-11-06", owner: "Studio" },
+      { id: "t1", title: "Edit on your profile: client review of the new default onboarding", done: false, status: "review", priority: "urgent", due: day(2), owner: "Client", description: "Open the profile canvas as Ava (blank), Elena (part-filled) and Hana (changes requested), and leave notes on anything that feels off." },
+      { id: "t2", title: "Choose the Figma team for generated imagery", done: false, status: "todo", priority: "high", due: day(2), owner: "Client" },
+      { id: "t3", title: "Worker API and D1 tables (DataSource → api.ts)", done: false, status: "doing", priority: "high", due: day(17), owner: "Anu", subtasks: [{ id: "s1", title: "Tables and migrations", done: true }, { id: "s2", title: "Invite and sign-up endpoints", done: false }, { id: "s3", title: "Swap the sample DataSource", done: false }] },
+      { id: "t4", title: "Clerk production instance and DNS", done: false, status: "todo", priority: "normal", due: day(10), owner: "Client" },
+      { id: "t5", title: "Owner tools and Studio on the workspace shell", done: false, status: "doing", priority: "normal", due: day(9), owner: "Studio" },
       { id: "t6", title: "Share images on every page", done: true, status: "done", priority: "low", owner: "Studio" },
       { id: "t7", title: "Workspace with project switcher and ⌘K", done: true, status: "done", priority: "normal", owner: "Studio" },
     ],
     milestones: [
-      { id: "m1", title: "Profile builder and owner tools", date: "2026-10-20", done: true },
-      { id: "m2", title: "Studio, Live site and build map", date: "2026-10-27", done: true },
-      { id: "m3", title: "Onboarding 2.0 and the workspace", date: "2026-10-30", done: false },
-      { id: "m4", title: "Backend connected, real sign-ups", date: "2026-11-20", done: false },
+      { id: "m1", title: "Profile builder and owner tools", date: day(-8), done: true },
+      { id: "m2", title: "Studio, Live site and build map", date: day(-1), done: true },
+      { id: "m3", title: "Onboarding 2.0 and the workspace", date: day(2), done: false },
+      { id: "m4", title: "Backend connected, real sign-ups", date: day(23), done: false },
     ],
     notes: [
-      { id: "n1", at: "2026-10-28T20:28:00Z", by: "Client", text: "Prioritise onboarding where Gigsters edit directly on a blank profile, and make it more wow." },
-      { id: "n2", at: "2026-10-28T20:58:00Z", by: "Client", text: "Put many things into one place until they're ready to move, like a Webflow or Framer projects page. Rebuild the shell: top, bottom, left, right, project switcher, ⌘K." },
-      { id: "n3", at: "2026-10-29T03:27:00Z", by: "Client", text: "Next: the onboarding experience, an internal project management system for clients, and a standard template for new client projects." },
+      { id: "n1", at: stamp(-1, "16:28"), by: "Client", text: "Prioritise onboarding where Gigsters edit directly on a blank profile, and make it more wow." },
+      { id: "n2", at: stamp(-1, "16:58"), by: "Client", text: "Put many things into one place until they're ready to move, like a Webflow or Framer projects page. Rebuild the shell: top, bottom, left, right, project switcher, ⌘K." },
+      { id: "n3", at: stamp(0, "09:27"), by: "Client", text: "Next: the onboarding experience, an internal project management system for clients, and a standard template for new client projects." },
     ],
   },
   {
-    id: "northlight", name: "Northlight Studio", sample: true, stage: "proposal", industry: "Architecture practice", started: "2026-10-21",
+    id: "northlight", name: "Northlight Studio", sample: true, stage: "proposal", industry: "Architecture practice", started: day(-7),
     summary: "A small practice wanting a portfolio site with a project archive their team can update.", nextStep: "Send the website proposal and timeline.",
     contacts: [{ name: "Sample contact", role: "Principal" }], linked: [], local: [], links: [],
-    tasks: [{ id: "t1", title: "Proposal: website, 6 weeks", done: false, status: "doing", priority: "high", due: "2026-11-03", owner: "Justin" }, { id: "t2", title: "Collect project photography", done: false, status: "todo", priority: "normal", owner: "Client" }],
-    milestones: [{ id: "m1", title: "Proposal sent", date: "2026-11-03", done: false }], notes: [{ id: "n1", at: "2026-10-22T15:00:00Z", by: "JAM Studio", text: "Intro call: wants a calm, image-led site." }],
+    tasks: [{ id: "t1", title: "Proposal: website, 6 weeks", done: false, status: "doing", priority: "high", due: day(6), owner: "Justin" }, { id: "t2", title: "Collect project photography", done: false, status: "todo", priority: "normal", owner: "Client" }],
+    milestones: [{ id: "m1", title: "Proposal sent", date: day(6), done: false }], notes: [{ id: "n1", at: stamp(-6, "15:00"), by: "JAM Studio", text: "Intro call: wants a calm, image-led site." }],
   },
   {
-    id: "harbor", name: "Harbor & Co.", sample: true, stage: "lead", industry: "Hospitality group", started: "2026-10-26",
+    id: "harbor", name: "Harbor & Co.", sample: true, stage: "lead", industry: "Hospitality group", started: day(-2),
     summary: "Three restaurants looking for one booking and events site.", nextStep: "Book a discovery call.",
     contacts: [{ name: "Sample contact", role: "Operations" }], linked: [], local: [], links: [],
-    tasks: [{ id: "t1", title: "Discovery call", done: false, status: "todo", priority: "normal", due: "2026-11-05", owner: "Justin" }, { id: "t2", title: "Look at their current booking flow", done: false, status: "todo", priority: "low", due: "2026-11-04", owner: "Anu" }], milestones: [], notes: [],
+    tasks: [{ id: "t1", title: "Discovery call", done: false, status: "todo", priority: "normal", due: day(8), owner: "Justin" }, { id: "t2", title: "Look at their current booking flow", done: false, status: "todo", priority: "low", due: day(7), owner: "Anu" }], milestones: [], notes: [],
   },
   {
-    id: "kestrel", name: "Kestrel Health", sample: true, stage: "paused", industry: "Clinic network", started: "2026-08-04",
-    summary: "Patient onboarding flow; paused while their compliance review finishes.", nextStep: "Check in after their review on Nov 10.",
+    id: "kestrel", name: "Kestrel Health", sample: true, stage: "paused", industry: "Clinic network", started: day(-85),
+    summary: "Patient onboarding flow; paused while their compliance review finishes.", nextStep: "Check in once their compliance review is done.",
     contacts: [{ name: "Sample contact", role: "Product" }], linked: [], local: [], links: [],
-    tasks: [{ id: "t1", title: "Onboarding flow v2", done: false, status: "todo", priority: "low", due: "2026-11-12", owner: "Anu" }, { id: "t2", title: "Accessibility audit", done: true, status: "done", priority: "normal", owner: "Studio" }],
-    milestones: [{ id: "m1", title: "Flow v1 delivered", date: "2026-09-12", done: true }, { id: "m2", title: "Restart after review", date: "2026-11-10", done: false }], notes: [],
+    tasks: [{ id: "t1", title: "Onboarding flow v2", done: false, status: "todo", priority: "low", due: day(15), owner: "Anu" }, { id: "t2", title: "Accessibility audit", done: true, status: "done", priority: "normal", owner: "Studio" }],
+    milestones: [{ id: "m1", title: "Flow v1 delivered", date: day(-46), done: true }, { id: "m2", title: "Restart after review", date: day(13), done: false }], notes: [],
   },
   {
-    id: "fieldnotes", name: "Fieldnotes Journal", sample: true, stage: "complete", industry: "Publishing", started: "2026-06-02",
+    id: "fieldnotes", name: "Fieldnotes Journal", sample: true, stage: "complete", industry: "Publishing", started: day(-148),
     summary: "Editorial site and newsletter templates, delivered.", nextStep: "Ask for a testimonial.",
     contacts: [{ name: "Sample contact", role: "Editor" }], linked: [], local: [], links: [],
-    tasks: [{ id: "t1", title: "Launch", done: true, status: "done", priority: "high", owner: "Studio" }, { id: "t2", title: "Ask for a testimonial", done: false, status: "todo", priority: "low", due: "2026-11-02", owner: "Justin" }], milestones: [{ id: "m1", title: "Launched", date: "2026-08-20", done: true }], notes: [],
+    tasks: [{ id: "t1", title: "Launch", done: true, status: "done", priority: "high", owner: "Studio" }, { id: "t2", title: "Ask for a testimonial", done: false, status: "todo", priority: "low", due: day(-2), owner: "Justin" }], milestones: [{ id: "m1", title: "Launched", date: day(-69), done: true }], notes: [],
   },
 ];
 
-const KEY = "cm-clients";
+// v2: the sample moved to dates relative to today; older saved copies had fixed October dates.
+const KEY = "cm-clients-v2";
 let cache: Client[] | null = null;
 const listeners = new Set<() => void>();
 const read = (): Client[] => {
